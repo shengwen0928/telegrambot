@@ -92,20 +92,25 @@ class HohsinAPI:
         
         return False
 
-    async def get_seating_plans(self, schedule_id: int) -> List[Dict[str, Any]]:
+    async def get_seating_plans(self, schedule_id: int, into_station_id: str, outof_station_id: str) -> List[Dict[str, Any]]:
         """獲取班次座位圖（使用預設 Token）。"""
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
-        
+        params = {
+            "intoStationId": into_station_id,
+            "outofStationId": outof_station_id
+        }
+
         # 即使登入了，此 API 可能仍需使用預設 Token
         headers = self.headers.copy()
         headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
-        
-        response = await self.client.get(url, headers=headers)
+
+        response = await self.client.get(url, params=params, headers=headers)
         if response.status_code != 200:
             print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
         data = response.json()
         return data.get("result", [])
+
 
     async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: Optional[str] = None) -> Dict[str, Any]:
         """

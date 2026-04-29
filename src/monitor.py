@@ -71,7 +71,11 @@ class HohsinMonitor:
             logger.info(f"發現可用班次: {departure_time}，正在獲取座位圖...")
             
             # 1. 獲取座位圖
-            seating_plans = await self.api.get_seating_plans(schedule_id)
+            seating_plans = await self.api.get_seating_plans(
+                schedule_id, 
+                schedule["intoStationId"], 
+                schedule["outofStationId"]
+            )
             
             # 2. 尋找第一個空位 (status 為 0 通常代表空位，具體依 API 回傳為準)
             # 根據常見 API 邏輯，result 列表中的物件包含 seatNo

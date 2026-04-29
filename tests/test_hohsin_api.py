@@ -33,14 +33,20 @@ async def test_hohsin_api_integration():
         # 3. 測試查詢班次 (使用今天日期)
         from datetime import datetime
         today = datetime.now().strftime("%Y-%m-%d")
-        
+
         try:
             schedules = await api.get_schedules(from_id, to_id, today)
             assert isinstance(schedules, list)
             print(f"班次查詢成功，回傳 {len(schedules)} 筆。")
-        except Exception as e:
-            print(f"班次查詢失敗: {e}")
 
+            if len(schedules) > 0:
+                # 測試獲取座位圖
+                sch = schedules[0]
+                seats = await api.get_seating_plans(sch["dailyScheduleId"], from_id, to_id)
+                assert isinstance(seats, list)
+                print(f"座位圖獲取成功，共 {len(seats)} 個位置。")
+        except Exception as e:
+            print(f"測試過程出錯: {e}")
     finally:
         await api.close()
 

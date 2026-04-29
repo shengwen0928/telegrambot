@@ -57,7 +57,7 @@ async def test_monitor_flow():
     # 驗證步驟
     mock_api.login.assert_called()
     mock_api.get_schedules.assert_called_with("G03", "B01", "2026-05-01", "10:00", "12:00")
-    mock_api.get_seating_plans.assert_called_with(12345)
+    mock_api.get_seating_plans.assert_called_with(12345, "G03", "B01")
     mock_api.book_ticket.assert_called_with(mock_schedules[0], 2)
     
     # 驗證通知

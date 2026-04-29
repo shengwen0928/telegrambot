@@ -1,14 +1,20 @@
-2026-04-30 06:30:15,245 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
-2026-04-30 06:30:15,282 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-04-30 06:30:15,298 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-04-30 06:30:15,487 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-04-30 06:30:15,600 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-04-30 06:30:15,601 - HohsinMonitor - INFO - 登入成功！
-2026-04-30 06:30:16,240 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 06:30:16,241 - HohsinMonitor - INFO - 發現可用班次: 2026-05-05T00:00:00，正在獲取座位圖...
-2026-04-30 06:30:16,258 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans "HTTP/1.1 403 Forbidden"
-獲取座位圖失敗: 403, 內容: {"result":null,"targetUrl":null,"success":false,"error":{"code":0,"message":"[At least one of these permissions must be granted]","details":null,"validationErrors":null},"unAuthorizedRequest":true,"__abp":true}
-2026-04-30 06:30:16,259 - HohsinMonitor - ERROR - 自動訂位過程發生錯誤: Client error '403 Forbidden' for url 'https://api.ebus.com.tw/web/schedules/348406/seatingplans'
-For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
-2026-04-30 06:30:17,384 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
-2026-04-30 06:30:19,957 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
+PS C:\Users\admin\Desktop\和欣搶票程序> python main.py
+2026-04-30 06:32:58,062 - HohsinMonitor - INFO - 🚀 監控啟動
+路線：G03 -> B01
+日期：2026-05-05
+範圍：00:00 - 23:59
+2026-04-30 06:32:59,203 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
+2026-04-30 06:32:59,203 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
+2026-04-30 06:32:59,242 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-04-30 06:32:59,259 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-04-30 06:32:59,474 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-04-30 06:32:59,632 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-04-30 06:32:59,632 - HohsinMonitor - INFO - 登入成功！
+2026-04-30 06:33:00,399 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
+2026-04-30 06:33:00,400 - HohsinMonitor - INFO - 發現可用班次: 2026-05-05T00:00:00，正在獲取座位圖...
+2026-04-30 06:33:00,536 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans "HTTP/1.1 400 Bad Request"
+獲取座位圖失敗: 400, 內容: {"result":null,"targetUrl":null,"success":false,"error":{"code":0,"message":"您的請求無效!","details":"在驗證過程中發現以下錯誤.\r\n - 上車車站代碼不得為空值！\r\n - 下車車站代碼不得為空值！\r\n","validationErrors":[{"message":"上車車站代碼不得為空值！","members":["intoStationId"]},{"message":"下車車站代碼不得為空值！","members":["outofStationId"]}]},"unAuthorizedRequest":false,"__abp":true}
+2026-04-30 06:33:00,537 - HohsinMonitor - ERROR - 自動訂位過程發生錯誤: Client error '400 Bad Request' for url 'https://api.ebus.com.tw/web/schedules/348406/seatingplans'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+2026-04-30 06:33:01,625 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
+2026-04-30 06:33:03,507 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
