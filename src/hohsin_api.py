@@ -93,26 +93,35 @@ class HohsinAPI:
         return False
 
     async def get_seating_plans(self, schedule_id: int) -> List[Dict[str, Any]]:
-        """獲取班次座位圖。"""
+        """獲取班次座位圖（需要使用者 Token）。"""
+        if not self.access_token:
+            raise ValueError("獲取座位圖前必須先登入。")
+            
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
         headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
+        headers["Authorization"] = f"Bearer {self.access_token}"
+        
         response = await self.client.get(url, headers=headers)
+        if response.status_code != 200:
+            print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
         data = response.json()
         return data.get("result", [])
 
-    async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: str = "G") -> Dict[str, Any]:
+    async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: Optional[str] = None) -> Dict[str, Any]:
         """
         執行訂位動作。
-        
-        Args:
-            schedule: 班次資料物件。
-            seat_no: 座位號碼。
-            ticket_kind_id: 票種 ID (預設為促銷票 G)。
         """
         if not self.access_token or not self.user_info:
             raise ValueError("執行訂位前必須先登入。")
+
+        # 如果沒指定票種，自動從班次資料中抓取第一個可用的票種 ID
+        if not ticket_kind_id:
+            prices = schedule.get("ticketPrices", [])
+            if prices:
+                ticket_kind_id = prices[0]["ticketKindId"]
+            else:
+                ticket_kind_id = "S" # 萬一沒資料，回退到全票 S
 
         url = f"{self.BASE_URL}/web/orders/book"
         payload = {
@@ -124,15 +133,15 @@ class HohsinAPI:
             "tickets": [
                 {
                     "ticketKindId": ticket_kind_id,
-                    "seatNo": seat_no
+                    "seatNo": int(seat_no)
                 }
             ],
             "memberId": self.user_info["id"],
-            "passengerName": self.user_info["name"],
-            "passengerIdentityNo": self.user_info["identityNo"],
-            "passengerPhoneNumber": self.user_info["phoneNumber"],
-            "passengerEmailAddress": self.user_info["emailAddress"],
-            "sex": self.user_info["sex"],
+            "passengerName": self.user_info.get("name", "使用者"),
+            "passengerIdentityNo": self.user_info.get("identityNo", ""),
+            "passengerPhoneNumber": self.user_info.get("phoneNumber", ""),
+            "passengerEmailAddress": self.user_info.get("emailAddress", ""),
+            "sex": self.user_info.get("sex", 1), # 預設男
             "isTaiwanTravelCard": False
         }
         
@@ -140,6 +149,8 @@ class HohsinAPI:
         headers["Authorization"] = f"Bearer {self.access_token}"
         
         response = await self.client.post(url, json=payload, headers=headers)
+        if response.status_code != 200:
+            print(f"訂位 API 失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
         return response.json()
 
@@ -197,3 +208,7 @@ class HohsinAPI:
         response = await self.client.get(url, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
+
+    async def close(self):
+        """關閉 HTTP 客戶端。"""
+        await self.client.aclose()

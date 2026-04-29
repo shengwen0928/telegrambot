@@ -66,7 +66,8 @@ class HohsinMonitor:
         """執行自動選位與訂票。"""
         try:
             schedule_id = schedule["dailyScheduleId"]
-            departure_time = schedule["departureTime"]
+            # API 回傳的是 scheduleDepartureTime 或 intoStationDepartureTime
+            departure_time = schedule.get("intoStationDepartureTime", "未知時間")
             logger.info(f"發現可用班次: {departure_time}，正在獲取座位圖...")
             
             # 1. 獲取座位圖
@@ -129,13 +130,14 @@ class HohsinMonitor:
                     self.end_time
                 )
                 
-                # 2. 檢查有無餘票 (通常是 check vacantCount > 0)
+                # 2. 檢查有無餘票 (使用正確欄位 vacantSeats)
                 target_schedule = None
                 for s in schedules:
-                    vacant_count = s.get("vacantCount", 0)
+                    vacant_count = s.get("vacantSeats", 0)
                     if vacant_count > 0:
                         target_schedule = s
                         break
+
                 
                 if target_schedule:
                     success = await self._auto_book(target_schedule)

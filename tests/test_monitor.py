@@ -31,7 +31,7 @@ async def test_monitor_flow():
         {
             "dailyScheduleId": 12345,
             "departureTime": "11:00",
-            "vacantCount": 1,
+            "vacantSeats": 1,
             "intoStationId": "G03",
             "outofStationId": "B01"
         }
@@ -77,7 +77,7 @@ async def test_monitor_no_tickets():
     mock_api.login.return_value = True
     
     # 第一輪沒票，第二輪手動停止
-    mock_api.get_schedules.return_value = [{"vacantCount": 0, "departureTime": "09:00"}]
+    mock_api.get_schedules.return_value = [{"vacantSeats": 0, "departureTime": "09:00"}]
 
     # 建立一個可以用來停止 monitor 的任務
     async def stop_monitor_later():
