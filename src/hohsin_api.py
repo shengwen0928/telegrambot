@@ -109,7 +109,14 @@ class HohsinAPI:
             print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
         data = response.json()
-        return data.get("result", [])
+        result = data.get("result")
+        
+        # 處理 result 可能是字典 (含 items) 或直接是清單的情況
+        if isinstance(result, dict):
+            return result.get("items", [])
+        elif isinstance(result, list):
+            return result
+        return []
 
 
     async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: Optional[str] = None) -> Dict[str, Any]:
