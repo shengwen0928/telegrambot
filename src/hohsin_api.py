@@ -43,6 +43,12 @@ class HohsinAPI:
         self.user_info = data.get("result", {})
         return self.user_info
 
+    async def get_captcha(self) -> bytes:
+        """獲取驗證碼圖片。"""
+        response = await self.client.get(self.CAPTCHA_URL)
+        response.raise_for_status()
+        return response.content
+
     async def login(self, user_name: Optional[str] = None, password: Optional[str] = None) -> bool:
         """
         執行登入邏輯。
