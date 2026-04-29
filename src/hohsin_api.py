@@ -17,6 +17,7 @@ class HohsinAPI:
         self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True)
         self.ocr = OCREngine()
         self.access_token: Optional[str] = None
+        self.user_info: Dict[str, Any] = {}
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
@@ -27,26 +28,24 @@ class HohsinAPI:
             "Authorization": f"Bearer {self.DEFAULT_TOKEN}"
         }
 
-    async def close(self):
-        """關閉 HTTP 用戶端。"""
-        await self.client.aclose()
-
-    async def get_captcha(self) -> bytes:
-        """獲取驗證碼圖片內容。"""
-        response = await self.client.get(self.CAPTCHA_URL)
+    async def get_member_info(self) -> Dict[str, Any]:
+        """獲取會員詳細資料（需要使用者 Token）。"""
+        if not self.access_token:
+            raise ValueError("執行此操作前必須先登入。")
+        
+        url = f"{self.BASE_URL}/web/members"
+        headers = self.headers.copy()
+        headers["Authorization"] = f"Bearer {self.access_token}"
+        
+        response = await self.client.get(url, headers=headers)
         response.raise_for_status()
-        return response.content
+        data = response.json()
+        self.user_info = data.get("result", {})
+        return self.user_info
 
     async def login(self, user_name: Optional[str] = None, password: Optional[str] = None) -> bool:
         """
         執行登入邏輯。
-        
-        Args:
-            user_name: 帳號（手機號碼），若未提供則從環境變數讀取。
-            password: 密碼，若未提供則從環境變數讀取。
-            
-        Returns:
-            登入是否成功。
         """
         user_name = user_name or os.getenv("USER_PHONE")
         password = password or os.getenv("USER_PASSWORD")
@@ -77,6 +76,8 @@ class HohsinAPI:
             if result and result.get("accessToken"):
                 self.access_token = result["accessToken"]
                 self.headers["Authorization"] = f"Bearer {self.access_token}"
+                # 登入成功後立即獲取完整會員資料 (含身分證號)
+                await self.get_member_info()
                 return True
             else:
                 print(f"登入失敗，驗證碼: {captcha_code}, 回應: {data}")
@@ -84,6 +85,57 @@ class HohsinAPI:
             print(f"登入請求錯誤: {response.status_code}, 內容: {response.text}")
         
         return False
+
+    async def get_seating_plans(self, schedule_id: int) -> List[Dict[str, Any]]:
+        """獲取班次座位圖。"""
+        url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
+        headers = self.headers.copy()
+        headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
+        response = await self.client.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("result", [])
+
+    async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: str = "G") -> Dict[str, Any]:
+        """
+        執行訂位動作。
+        
+        Args:
+            schedule: 班次資料物件。
+            seat_no: 座位號碼。
+            ticket_kind_id: 票種 ID (預設為促銷票 G)。
+        """
+        if not self.access_token or not self.user_info:
+            raise ValueError("執行訂位前必須先登入。")
+
+        url = f"{self.BASE_URL}/web/orders/book"
+        payload = {
+            "dailyScheduleId": schedule["dailyScheduleId"],
+            "intoStationId": schedule["intoStationId"],
+            "outofStationId": schedule["outofStationId"],
+            "returnIntoStationId": "",
+            "returnOutofStationId": "",
+            "tickets": [
+                {
+                    "ticketKindId": ticket_kind_id,
+                    "seatNo": seat_no
+                }
+            ],
+            "memberId": self.user_info["id"],
+            "passengerName": self.user_info["name"],
+            "passengerIdentityNo": self.user_info["identityNo"],
+            "passengerPhoneNumber": self.user_info["phoneNumber"],
+            "passengerEmailAddress": self.user_info["emailAddress"],
+            "sex": self.user_info["sex"],
+            "isTaiwanTravelCard": False
+        }
+        
+        headers = self.headers.copy()
+        headers["Authorization"] = f"Bearer {self.access_token}"
+        
+        response = await self.client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
 
     async def get_stations(self) -> List[Dict[str, Any]]:
         """獲取車站清單（使用預設 Token）。"""
