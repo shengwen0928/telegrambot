@@ -93,12 +93,14 @@ class HohsinAPI:
         return False
 
     async def get_seating_plans(self, schedule_id: int) -> List[Dict[str, Any]]:
-        """獲取班次座位圖（需要使用者 Token）。"""
-        if not self.access_token:
-            raise ValueError("獲取座位圖前必須先登入。")
-            
+        """獲取班次座位圖（使用預設 Token）。"""
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
-        response = await self.client.get(url)
+        
+        # 即使登入了，此 API 可能仍需使用預設 Token
+        headers = self.headers.copy()
+        headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
+        
+        response = await self.client.get(url, headers=headers)
         if response.status_code != 200:
             print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
