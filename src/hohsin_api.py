@@ -14,10 +14,6 @@ class HohsinAPI:
     DEFAULT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjEiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6IjdhYThkYjA3LTJlMWQtNDdlYS1hMjQyLTg1NDJhNzZiMTg1YyIsInN1YiI6IjEiLCJqdGkiOiI5NTlhNWJlNy05YzI0LTQ5NTEtOGQxMS02MTY3ZDRjOWYyZmIiLCJpYXQiOjE3NDc3MTIwMzcsIm5iZiI6MTc0NzcxMjAzNywiZXhwIjoyMDYzMDcyMDM3LCJpc3MiOiJCYWNrZW5kIiwiYXVkIjoiQmFja2VuZCJ9.UwUVXBOVlmm64Os4masmSEME1TpZVzVWWxDOLkOabpg"
 
     def __init__(self):
-        self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True)
-        self.ocr = OCREngine()
-        self.access_token: Optional[str] = None
-        self.user_info: Dict[str, Any] = {}
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
@@ -27,6 +23,10 @@ class HohsinAPI:
             "Referer": "https://www.ebus.com.tw/",
             "Authorization": f"Bearer {self.DEFAULT_TOKEN}"
         }
+        self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=self.headers)
+        self.ocr = OCREngine()
+        self.access_token: Optional[str] = None
+        self.user_info: Dict[str, Any] = {}
 
     async def get_member_info(self) -> Dict[str, Any]:
         """獲取會員詳細資料（需要使用者 Token）。"""
@@ -34,10 +34,7 @@ class HohsinAPI:
             raise ValueError("執行此操作前必須先登入。")
         
         url = f"{self.BASE_URL}/web/members"
-        headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {self.access_token}"
-        
-        response = await self.client.get(url, headers=headers)
+        response = await self.client.get(url)
         response.raise_for_status()
         data = response.json()
         self.user_info = data.get("result", {})
@@ -74,14 +71,17 @@ class HohsinAPI:
             "CaptchaCode": captcha_code
         }
 
-        response = await self.client.post(login_url, json=payload, headers=self.headers)
+        response = await self.client.post(login_url, json=payload)
         
         if response.status_code == 200:
             data = response.json()
             result = data.get("result")
             if result and result.get("accessToken"):
                 self.access_token = result["accessToken"]
+                # 更新全局 Header，讓後續 client 請求自動帶上新 token
                 self.headers["Authorization"] = f"Bearer {self.access_token}"
+                self.client.headers.update(self.headers)
+                
                 # 登入成功後立即獲取完整會員資料 (含身分證號)
                 await self.get_member_info()
                 return True
@@ -98,10 +98,7 @@ class HohsinAPI:
             raise ValueError("獲取座位圖前必須先登入。")
             
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
-        headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {self.access_token}"
-        
-        response = await self.client.get(url, headers=headers)
+        response = await self.client.get(url)
         if response.status_code != 200:
             print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
@@ -145,10 +142,7 @@ class HohsinAPI:
             "isTaiwanTravelCard": False
         }
         
-        headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {self.access_token}"
-        
-        response = await self.client.post(url, json=payload, headers=headers)
+        response = await self.client.post(url, json=payload)
         if response.status_code != 200:
             print(f"訂位 API 失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
@@ -157,6 +151,7 @@ class HohsinAPI:
     async def get_stations(self) -> List[Dict[str, Any]]:
         """獲取車站清單（使用預設 Token）。"""
         url = f"{self.BASE_URL}/web/stations"
+        # 即使登入了，此 API 仍需使用預設 Token
         headers = self.headers.copy()
         headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
         response = await self.client.get(url, headers=headers)
@@ -169,13 +164,6 @@ class HohsinAPI:
     async def get_schedules(self, from_station_id: str, to_station_id: str, travel_date: str, start_time: str = "00:00", end_time: str = "23:59") -> List[Dict[str, Any]]:
         """
         查詢班次列表（使用預設 Token）。
-        
-        Args:
-            from_station_id: 起點車站 ID (如 G03)。
-            to_station_id: 終點車站 ID (如 B01)。
-            travel_date: 乘車日期 (YYYY-MM-DD)。
-            start_time: 開始時間 (HH:mm)。
-            end_time: 結束時間 (HH:mm)。
         """
         url = f"{self.BASE_URL}/web/schedules"
         params = {
@@ -185,6 +173,7 @@ class HohsinAPI:
             "beginDepartureTime": start_time,
             "endDepartureTime": end_time
         }
+        # 即使登入了，此 API 仍需使用預設 Token
         headers = self.headers.copy()
         headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
         
