@@ -27,6 +27,16 @@ class HohsinAPI:
         self.ocr = OCREngine()
         self.access_token: Optional[str] = None
         self.user_info: Dict[str, Any] = {}
+        self._stations_cache: List[Dict[str, Any]] = []
+
+    async def get_station_name(self, station_id: str) -> str:
+        """根據 ID 獲取站名。"""
+        if not self._stations_cache:
+            self._stations_cache = await self.get_stations()
+        for s in self._stations_cache:
+            if s.get("id") == station_id:
+                return s.get("operatingName", station_id)
+        return station_id
 
     async def get_member_info(self) -> Dict[str, Any]:
         """獲取會員詳細資料（需要使用者 Token）。"""
@@ -93,22 +103,24 @@ class HohsinAPI:
         return False
 
     async def get_seating_plans(self, schedule_id: int, into_station_id: str, outof_station_id: str) -> List[Dict[str, Any]]:
-        """獲取班次座位圖（使用預設 Token）。"""
+        """獲取班次座位圖。"""
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
         params = {
             "intoStationId": into_station_id,
             "outofStationId": outof_station_id
         }
 
-        # 即使登入了，此 API 可能仍需使用預設 Token
+        # 優先使用登入後的 Token，如果沒登入則嘗試使用預設 Token
+        token = self.access_token or self.DEFAULT_TOKEN
         headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
+        headers["Authorization"] = f"Bearer {token}"
 
         response = await self.client.get(url, params=params, headers=headers)
         if response.status_code != 200:
             print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
         response.raise_for_status()
         data = response.json()
+        
         result = data.get("result")
         
         # 處理 result 可能是字典 (含 items) 或直接是清單的情況

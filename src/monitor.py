@@ -66,9 +66,13 @@ class HohsinMonitor:
         """執行自動選位與訂票。"""
         try:
             schedule_id = schedule["dailyScheduleId"]
+            from_name = await self.api.get_station_name(schedule["intoStationId"])
+            to_name = await self.api.get_station_name(schedule["outofStationId"])
+            
             # API 回傳的是 scheduleDepartureTime 或 intoStationDepartureTime
             departure_time = schedule.get("intoStationDepartureTime", "未知時間")
-            logger.info(f"發現可用班次: {departure_time}，正在獲取座位圖...")
+            logger.info(f"發現可用班次: [{schedule_id}] {from_name} -> {to_name} ({departure_time})")
+            logger.info(f"正在獲取座位圖，完整班次資料: {schedule}")
             
             # 1. 獲取座位圖
             seating_plans = await self.api.get_seating_plans(
@@ -77,7 +81,13 @@ class HohsinMonitor:
                 schedule["outofStationId"]
             )
             
-            # 2. 尋找第一個空位 (status 為 0 通常代表空位，具體依 API 回傳為準)
+            # 偵錯用：列出座位圖結構
+            if seating_plans:
+                logger.info(f"成功獲取座位圖，樣例座位數據: {seating_plans[0]}")
+            else:
+                logger.warning("座位圖回傳為空。")
+            
+            # 2. 尋找第一個空位
             # 根據常見 API 邏輯，result 列表中的物件包含 seatNo
             # 我們假設 status=0 是空位，或是直接找沒有被佔用的序號
             vacant_seat = None
@@ -111,7 +121,10 @@ class HohsinMonitor:
 
     async def run(self):
         """啟動監控循環。"""
-        start_msg = f"🚀 監控啟動\n路線：{self.from_station} -> {self.to_station}\n日期：{self.travel_date}\n範圍：{self.start_time} - {self.end_time}"
+        from_name = await self.api.get_station_name(self.from_station)
+        to_name = await self.api.get_station_name(self.to_station)
+        
+        start_msg = f"🚀 監控啟動\n路線：{from_name} ({self.from_station}) -> {to_name} ({self.to_station})\n日期：{self.travel_date}\n範圍：{self.start_time} - {self.end_time}"
         logger.info(start_msg)
         await self.notifier.send_message(start_msg)
 

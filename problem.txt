@@ -1,18 +1,20 @@
 PS C:\Users\admin\Desktop\和欣搶票程序> python main.py
-2026-04-30 06:35:24,232 - HohsinMonitor - INFO - 🚀 監控啟動
-路線：G03 -> B01
+2026-04-30 06:43:14,708 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-04-30 06:43:14,708 - HohsinMonitor - INFO - 🚀 監控啟動
+路線：台北總站 (G03) -> 臺南轉運站 (B01)
 日期：2026-05-05
 範圍：00:00 - 23:59
-2026-04-30 06:35:25,378 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
-2026-04-30 06:35:25,379 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
-2026-04-30 06:35:25,417 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-04-30 06:35:25,434 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-04-30 06:35:25,622 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-04-30 06:35:25,761 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-04-30 06:35:25,762 - HohsinMonitor - INFO - 登入成功！
-2026-04-30 06:35:26,499 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 06:35:26,499 - HohsinMonitor - INFO - 發現可用班次: 2026-05-05T00:00:00，正在獲取座位圖...
-2026-04-30 06:35:26,684 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01 "HTTP/1.1 200 OK"
-2026-04-30 06:35:26,684 - HohsinMonitor - ERROR - 自動訂位過程發生錯誤: 'str' object has no attribute 'get'
-2026-04-30 06:35:27,790 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
-2026-04-30 06:35:30,904 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
+2026-04-30 06:43:15,888 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
+2026-04-30 06:43:15,888 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
+2026-04-30 06:43:15,943 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-04-30 06:43:15,960 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-04-30 06:43:16,078 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-04-30 06:43:16,194 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-04-30 06:43:16,195 - HohsinMonitor - INFO - 登入成功！
+2026-04-30 06:43:16,856 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
+2026-04-30 06:43:16,856 - HohsinMonitor - INFO - 發現可用班次: [348406] 台北總站 -> 臺南轉運站 (2026-05-05T00:00:00)
+2026-04-30 06:43:16,857 - HohsinMonitor - INFO - 正在獲取座位圖，完整班次資料: {'dailyScheduleId': 348406, 'operatingLineId': 'L0008', 'operatingLineDescription': '台北->台南', 'scheduleDepartureDate': '2026-05-05T00:00:00', 'scheduleDepartureTime': '00:00:00', 'busSpecificationId': '16B', 'busSpecificationRows': 2, 'cabinLevel': '二排 16 座', 'isNonStop': False, 'intoStationId': 'G03', 'intoStationOperatingName': '台北總站', 'intoStationDepartureTime': '2026-05-05T00:00:00', 'outofStationId': 'B01', 'outofStationOperatingName': '臺南轉運站', 'isTwiceTicket': False, 'vacantSeats': 12, 'maxTicketDollar': 560, 'ticketPrices': [{'ticketKindId': 'N', 'ticketKindDescription': '促銷票', 'ticketDollars': 560}, {'ticketKindId': 'H', 'ticketKindDescription': '半票', 'ticketDollars': 380}], 'sellStatus': 'CanOrderSell'}
+2026-04-30 06:43:17,048 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01 "HTTP/1.1 200 OK"
+2026-04-30 06:43:17,048 - HohsinMonitor - WARNING - 座位圖回傳為空。
+2026-04-30 06:43:17,048 - HohsinMonitor - WARNING - 班次 2026-05-05T00:00:00 雖然顯示有餘票，但座位圖中無可用空位。
+2026-04-30 06:43:20,161 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
