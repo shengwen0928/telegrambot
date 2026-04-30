@@ -23,7 +23,8 @@ class HohsinMonitor:
         travel_date: str,
         start_time: str = "00:00",
         end_time: str = "23:59",
-        max_retries: int = 5
+        max_retries: int = 5,
+        notifier = None
     ):
         """
         初始化監控器。
@@ -35,9 +36,10 @@ class HohsinMonitor:
             start_time: 開始時間篩選 (HH:mm)。
             end_time: 結束時間篩選 (HH:mm)。
             max_retries: 登入或 API 失敗時的最大重試次數。
+            notifier: 自訂通知模組，預設為 TelegramNotifier。
         """
         self.api = HohsinAPI()
-        self.notifier = TelegramNotifier()
+        self.notifier = notifier if notifier else TelegramNotifier()
         self.from_station = from_station
         self.to_station = to_station
         self.travel_date = travel_date

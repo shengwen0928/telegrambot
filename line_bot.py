@@ -13,6 +13,7 @@ from linebot.v3.messaging import (
     ApiClient,
     MessagingApi,
     ReplyMessageRequest,
+    PushMessageRequest,
     TextMessage,
     FlexMessage,
     FlexContainer,
@@ -50,7 +51,21 @@ api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
+class LineNotifier:
+    """專門為 LINE 打造的通知模組"""
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+
+    async def send_message(self, text: str):
+        """非同步發送訊息 (使用 Push Message)"""
+        try:
+            req = PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)])
+            line_bot_api.push_message(req)
+        except Exception as e:
+            logger.error(f"LINE 推播失敗: {e}")
+
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
+
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", "from_stn": "G03", "to_stn": "B01", "date": "2026-05-05"} }
 user_states: Dict[str, Dict[str, Any]] = {}
 
@@ -263,7 +278,8 @@ def handle_message(event):
             to_station=state["to_stn"],
             travel_date=travel_date,
             start_time=start_t,
-            end_time=end_t
+            end_time=end_t,
+            notifier=LineNotifier(user_id)
         )
         asyncio.create_task(monitor.run())
         
