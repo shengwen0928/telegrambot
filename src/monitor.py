@@ -26,21 +26,23 @@ class HohsinMonitor:
         max_retries: int = 5,
         notifier = None,
         user_phone: Optional[str] = None,
-        user_password: Optional[str] = None
+        user_password: Optional[str] = None,
+        manual_seats: Optional[List[int]] = None
     ):
         """
         初始化監控器。
         
         Args:
-            from_station: 起點站 ID (如 G03)。
-            to_station: 終點站 ID (如 B01)。
+            from_station: 起點站 ID。
+            to_station: 終點站 ID。
             travel_date: 乘車日期 (YYYY-MM-DD)。
-            start_time: 開始時間篩選 (HH:mm)。
-            end_time: 結束時間篩選 (HH:mm)。
-            max_retries: 登入或 API 失敗時的最大重試次數。
-            notifier: 自訂通知模組，預設為 TelegramNotifier。
-            user_phone: 用戶手機號碼 (用於覆蓋 .env)。
-            user_password: 用戶密碼 (用於覆蓋 .env)。
+            start_time: 開始時間。
+            end_time: 結束時間。
+            max_retries: 最大重試次數。
+            notifier: 通知模組。
+            user_phone: 用戶手機。
+            user_password: 用戶密碼。
+            manual_seats: 使用者指定要搶的座號清單。
         """
         self.api = HohsinAPI()
         self.notifier = notifier if notifier else TelegramNotifier()
@@ -53,6 +55,8 @@ class HohsinMonitor:
         self.is_running = False
         self.user_phone = user_phone
         self.user_password = user_password
+        self.manual_seats = manual_seats
+        self.num_tickets = 1 # 預設 1 張，可由外部修改
 
     async def _login_with_retry(self) -> bool:
         """嘗試登入，具備重試機制。"""
@@ -94,17 +98,31 @@ class HohsinMonitor:
             all_vacant = [seat["seatNo"] for seat in seating_plans if seat.get("ticketId") is None]
             selected_seats = []
 
-            if num_tickets == 2:
-                # 兩張票的連號優先級 (括號內為一組)
-                pair_groups = [
-                    (3, 4), (6, 7), (9, 10), (13, 14), (16, 17), (19, 20), (22, 23), (25, 26), # 第一優先
-                    (1, 2), (28, 29) # 第二優先
-                ]
-                
-                for p1, p2 in pair_groups:
-                    if p1 in all_vacant and p2 in all_vacant:
-                        selected_seats = [p1, p2]
-                        break
+            # A. 優先處理「手動指定」座位
+            if self.manual_seats:
+                logger.info(f"優先嘗試手動指定座位: {self.manual_seats}")
+                matched_manual = [s for s in self.manual_seats if s in all_vacant]
+                if len(matched_manual) >= num_tickets:
+                    selected_seats = matched_manual[:num_tickets]
+                    logger.info(f"手動選位成功：{selected_seats}")
+                else:
+                    logger.warning(f"手動座位 {self.manual_seats} 目前無足夠空位。")
+                    # 如果手動選位失敗，且使用者要求「嚴格手動」，則可以在此 return False
+                    # 這裡我們先採「自動退而求其次」逻辑，您可以決定是否要跳過
+            
+            # B. 如果沒手動選位，或手動選位失敗，進入自動選位邏輯
+            if not selected_seats:
+                if num_tickets == 2:
+                    # 兩張票的連號優先級 (括號內為一組)
+                    pair_groups = [
+                        (3, 4), (6, 7), (9, 10), (13, 14), (16, 17), (19, 20), (22, 23), (25, 26), # 第一優先
+                        (1, 2), (28, 29) # 第二優先
+                    ]
+                    
+                    for p1, p2 in pair_groups:
+                        if p1 in all_vacant and p2 in all_vacant:
+                            selected_seats = [p1, p2]
+                            break
                 
                 if not selected_seats:
                     logger.warning(f"班次 {departure_time} 雖有餘票，但無指定連號座位，跳過。")
@@ -190,7 +208,7 @@ class HohsinMonitor:
 
                 
                 if target_schedule:
-                    success = await self._auto_book(target_schedule)
+                    success = await self._auto_book(target_schedule, num_tickets=self.num_tickets)
                     if success:
                         self.is_running = False
                         break
