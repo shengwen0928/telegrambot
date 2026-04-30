@@ -1,6 +1,7 @@
 import os
 import asyncio
 import logging
+import json
 from datetime import datetime, timedelta
 from typing import Dict, Any
 
@@ -34,6 +35,24 @@ from src.monitor import HohsinMonitor
 # 設定日誌
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LineBot")
+
+USER_DB_FILE = "users.json"
+
+def load_users() -> Dict[str, Dict[str, str]]:
+    if os.path.exists(USER_DB_FILE):
+        try:
+            with open(USER_DB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"讀取 users.json 失敗: {e}")
+    return {}
+
+def save_users(data: Dict[str, Dict[str, str]]):
+    try:
+        with open(USER_DB_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"寫入 users.json 失敗: {e}")
 
 # 讀取環境變數
 load_dotenv()
@@ -82,6 +101,20 @@ async def init_stations():
             logger.error(f"無法獲取車站清單: {e}")
 
 # --- 輔助函式：建立 Flex Message ---
+
+def create_credential_choice_quick_reply():
+    """建立是否使用儲存帳密的 Quick Reply"""
+    return QuickReply(items=[
+        QuickReplyItem(action=MessageAction(label="✅ 使用儲存帳密", text="帳密:使用儲存")),
+        QuickReplyItem(action=MessageAction(label="🔄 輸入新帳密", text="帳密:輸入全新"))
+    ])
+
+def create_save_choice_quick_reply():
+    """建立是否記憶帳密的 Quick Reply"""
+    return QuickReply(items=[
+        QuickReplyItem(action=MessageAction(label="💾 是，記住帳密", text="記憶:是")),
+        QuickReplyItem(action=MessageAction(label="❌ 否，不要記住", text="記憶:否"))
+    ])
 
 def create_bus_quick_reply():
     """建立客運選擇的 Quick Reply"""
@@ -202,9 +235,74 @@ def handle_message(event):
 
     # 1. 啟動指令
     if text in ["搶票", "/start", "開始"]:
+        users = load_users()
+        if user_id in users:
+            state["step"] = "waiting_for_credential_choice"
+            masked_phone = users[user_id].get("phone", "")
+            if len(masked_phone) >= 4:
+                masked_phone = masked_phone[:-4] + "****"
+            reply = TextMessage(
+                text=f"歡迎回來！您有儲存的帳號 ({masked_phone})。\n請問要使用該帳號，還是輸入新帳密？",
+                quick_reply=create_credential_choice_quick_reply()
+            )
+        else:
+            state["step"] = "waiting_for_phone"
+            reply = TextMessage(text="歡迎使用自動搶票機器人！\n為確保訂票成功，請輸入您的【和欣客運手機號碼】：")
+            
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 1.1 選擇是否使用儲存帳密
+    if state["step"] == "waiting_for_credential_choice" and text.startswith("帳密:"):
+        if text == "帳密:使用儲存":
+            users = load_users()
+            state["phone"] = users[user_id]["phone"]
+            state["password"] = users[user_id]["password"]
+            
+            state["step"] = "waiting_for_bus"
+            reply = TextMessage(
+                text="✅ 已載入帳密！\n請選擇您要搶票的客運：",
+                quick_reply=create_bus_quick_reply()
+            )
+        else:
+            state["step"] = "waiting_for_phone"
+            reply = TextMessage(text="請輸入您的【和欣客運手機號碼】：")
+            
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 1.2 輸入手機
+    if state["step"] == "waiting_for_phone":
+        state["phone"] = text
+        state["step"] = "waiting_for_password"
+        reply = TextMessage(text="請輸入您的【和欣客運密碼】\n(預設通常是身分證字號，英文字母大寫)：")
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 1.3 輸入密碼
+    if state["step"] == "waiting_for_password":
+        state["password"] = text
+        state["step"] = "waiting_for_save_choice"
+        reply = TextMessage(
+            text="請問您是否要將此帳密儲存起來，方便下次自動登入？\n(將安全儲存於本地伺服器)",
+            quick_reply=create_save_choice_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 1.4 選擇是否儲存
+    if state["step"] == "waiting_for_save_choice" and text.startswith("記憶:"):
+        if text == "記憶:是":
+            users = load_users()
+            users[user_id] = {
+                "phone": state["phone"],
+                "password": state["password"]
+            }
+            save_users(users)
+        
         state["step"] = "waiting_for_bus"
         reply = TextMessage(
-            text="歡迎使用自動搶票機器人！\n請選擇您要搶票的客運：",
+            text="設定完成！\n請選擇您要搶票的客運：",
             quick_reply=create_bus_quick_reply()
         )
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
@@ -279,7 +377,9 @@ def handle_message(event):
             travel_date=travel_date,
             start_time=start_t,
             end_time=end_t,
-            notifier=LineNotifier(user_id)
+            notifier=LineNotifier(user_id),
+            user_phone=state.get("phone"),
+            user_password=state.get("password")
         )
         asyncio.create_task(monitor.run())
         

@@ -24,7 +24,9 @@ class HohsinMonitor:
         start_time: str = "00:00",
         end_time: str = "23:59",
         max_retries: int = 5,
-        notifier = None
+        notifier = None,
+        user_phone: Optional[str] = None,
+        user_password: Optional[str] = None
     ):
         """
         初始化監控器。
@@ -37,6 +39,8 @@ class HohsinMonitor:
             end_time: 結束時間篩選 (HH:mm)。
             max_retries: 登入或 API 失敗時的最大重試次數。
             notifier: 自訂通知模組，預設為 TelegramNotifier。
+            user_phone: 用戶手機號碼 (用於覆蓋 .env)。
+            user_password: 用戶密碼 (用於覆蓋 .env)。
         """
         self.api = HohsinAPI()
         self.notifier = notifier if notifier else TelegramNotifier()
@@ -47,13 +51,15 @@ class HohsinMonitor:
         self.end_time = end_time
         self.max_retries = max_retries
         self.is_running = False
+        self.user_phone = user_phone
+        self.user_password = user_password
 
     async def _login_with_retry(self) -> bool:
         """嘗試登入，具備重試機制。"""
         for i in range(self.max_retries):
             try:
                 logger.info(f"正在嘗試登入... (第 {i+1} 次)")
-                if await self.api.login():
+                if await self.api.login(self.user_phone, self.user_password):
                     logger.info("登入成功！")
                     return True
             except Exception as e:
