@@ -214,7 +214,7 @@ class HohsinMonitor:
 
                 
                 if target_schedule:
-                    success = await self._auto_book(target_schedule, num_tickets=self.num_tickets)
+                    success = await self._auto_book(target_schedule)
                     if success:
                         self.is_running = False
                         break
