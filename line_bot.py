@@ -198,6 +198,13 @@ def create_times_quick_reply():
         items.append(QuickReplyItem(action=MessageAction(label=t, text=f"時段:{t}")))
     return QuickReply(items=items)
 
+def create_ticket_count_quick_reply():
+    """建立購買張數的 Quick Reply"""
+    items = []
+    for i in range(1, 5): # 支援 1-4 張
+        items.append(QuickReplyItem(action=MessageAction(label=f"{i} 張", text=f"張數:{i}")))
+    return QuickReply(items=items)
+
 def get_station_name(stn_id: str) -> str:
     for s in STATIONS_CACHE:
         if s["id"] == stn_id:
@@ -351,24 +358,40 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
-    # 6. 選擇時段並啟動監控
+    # 6. 選擇時段
     if state["step"] == "waiting_for_time" and text.startswith("時段:"):
-        time_range = text[3:] # ex: 00:00~03:00 (去掉前三個字 "時段:")
+        time_range = text[3:] # ex: 00:00~03:00
         start_t, end_t = time_range.split("~")
         
         state["start_time"] = start_t
         state["end_time"] = end_t
+        state["step"] = "waiting_for_count"
+        
+        reply = TextMessage(
+            text=f"⏰ 時段：{time_range}\n\n請問您要購買幾張票？",
+            quick_reply=create_ticket_count_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 7. 選擇張數並啟動監控
+    if state["step"] == "waiting_for_count" and text.startswith("張數:"):
+        num_tickets = int(text.split(":")[1])
+        state["num_tickets"] = num_tickets
         
         from_name = get_station_name(state["from_stn"])
         to_name = get_station_name(state["to_stn"])
         travel_date = state["date"]
+        start_t = state["start_time"]
+        end_t = state["end_time"]
         
         summary = (
             "✅ 搶票任務已建立並開始背景監控！\n\n"
             f"🚌 客運：和欣客運\n"
             f"📍 路線：{from_name} -> {to_name}\n"
             f"📅 日期：{travel_date}\n"
-            f"⏰ 時段：{start_t} ~ {end_t}\n\n"
+            f"⏰ 時段：{start_t} ~ {end_t}\n"
+            f"🎫 張數：{num_tickets} 張\n\n"
             "💡 提示：您可以再次輸入「搶票」建立另一筆任務。"
         )
         
@@ -386,6 +409,9 @@ def handle_message(event):
             user_phone=state.get("phone"),
             user_password=state.get("password")
         )
+        # 呼叫 monitor.run() 時，我們的底層邏輯需要傳入張數
+        # 修改: 由於 monitor.run() 目前不收參數，我們把張數存進 monitor 實例
+        monitor.num_tickets = num_tickets 
         asyncio.create_task(monitor.run())
         
         # 清除狀態

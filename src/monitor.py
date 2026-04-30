@@ -70,19 +70,17 @@ class HohsinMonitor:
         
         return False
 
-    async def _auto_book(self, schedule: Dict[str, Any]) -> bool:
-        """執行自動選位與訂票。"""
+    async def _auto_book(self, schedule: Dict[str, Any], num_tickets: int = 1) -> bool:
+        """執行自動選位與訂票，支援多張票。"""
         try:
             schedule_id = schedule["dailyScheduleId"]
             from_name = await self.api.get_station_name(schedule["intoStationId"])
             to_name = await self.api.get_station_name(schedule["outofStationId"])
             
-            # API 回傳的是 scheduleDepartureTime 或 intoStationDepartureTime
             departure_time = schedule.get("intoStationDepartureTime", "未知時間")
-            logger.info(f"發現可用班次: [{schedule_id}] {from_name} -> {to_name} ({departure_time})")
-            logger.info(f"正在獲取座位圖，完整班次資料: {schedule}")
+            logger.info(f"發現可用班次: [{schedule_id}] {from_name} -> {to_name} ({departure_time})，預計訂購 {num_tickets} 張")
             
-            # 1. 獲取座位圖 (傳入完整參數：日期 + 區間)
+            # 1. 獲取座位圖
             seating_plans = await self.api.get_seating_plans(
                 schedule_id, 
                 schedule["intoStationId"], 
@@ -92,31 +90,21 @@ class HohsinMonitor:
                 end_time=self.end_time
             )
             
-            # 偵錯用：列出座位圖結構
-            if seating_plans:
-                logger.info(f"成功獲取座位圖，樣例座位數據: {seating_plans[0]}")
-            else:
-                logger.warning("座位圖回傳為空。")
+            # 2. 尋找足夠數量的空位
+            vacant_seats = [seat["seatNo"] for seat in seating_plans if seat.get("ticketId") is None]
             
-            # 2. 尋找第一個空位
-            # 根據真實封包，座位清單直接是 [{"seatNo": 1, "ticketId": null}, ...]
-            # ticketId 為 null 表示是空位
-            vacant_seat = None
-            for seat in seating_plans:
-                if seat.get("ticketId") is None:
-                    vacant_seat = seat["seatNo"]
-                    break
-            
-            if vacant_seat is None:
-                logger.warning(f"班次 {departure_time} 雖然顯示有餘票，但座位圖中無可用空位。")
+            if len(vacant_seats) < num_tickets:
+                logger.warning(f"班次 {departure_time} 餘票不足。需要 {num_tickets} 張，僅剩 {len(vacant_seats)} 張。")
                 return False
             
+            selected_seats = vacant_seats[:num_tickets]
+            
             # 3. 執行訂票
-            logger.info(f"選定座位: {vacant_seat}，執行訂位...")
-            result = await self.api.book_ticket(schedule, vacant_seat)
+            logger.info(f"選定座位: {selected_seats}，執行訂位...")
+            result = await self.api.book_ticket(schedule, selected_seats)
             
             if result.get("success") or result.get("result"):
-                msg = f"🎉 搶票成功！\n日期：{self.travel_date}\n班次：{departure_time}\n座位：{vacant_seat}"
+                msg = f"🎉 搶票成功！\n日期：{self.travel_date}\n班次：{departure_time}\n張數：{num_tickets}\n座位：{', '.join(map(str, selected_seats))}"
                 logger.info(msg)
                 await self.notifier.send_message(msg)
                 return True
