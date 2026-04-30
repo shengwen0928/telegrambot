@@ -56,15 +56,12 @@ class HohsinAPI:
         response.raise_for_status()
         return response.content
 
-    async def login(self, user_name: Optional[str] = None, password: Optional[str] = None) -> bool:
+    async def login(self, user_name: str, password: str) -> bool:
         """
-        執行登入邏輯。
+        執行登入邏輯。強制要求傳入帳號密碼。
         """
-        user_name = user_name or os.getenv("USER_PHONE")
-        password = password or os.getenv("USER_PASSWORD")
-
         if not user_name or not password:
-            raise ValueError("必須提供帳號密碼或設置環境變數。")
+            raise ValueError("必須提供和欣客運的帳號與密碼。")
 
         # 0. 先造訪登入頁面以建立基礎 Cookies
         await self.client.get("https://www.ebus.com.tw/Home/LogIn")
