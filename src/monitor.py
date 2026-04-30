@@ -95,20 +95,30 @@ class HohsinMonitor:
             )
             
             # 2. 定義座位偏好邏輯
-            all_vacant = [seat["seatNo"] for seat in seating_plans if seat.get("ticketId") is None]
+            # 強制將座號轉為整數以防型別衝突
+            all_vacant = []
+            for seat in seating_plans:
+                if seat.get("ticketId") is None:
+                    try:
+                        all_vacant.append(int(seat["seatNo"]))
+                    except (ValueError, KeyError):
+                        continue
+            
+            logger.info(f"目前所有空位: {sorted(all_vacant)}")
             selected_seats = []
 
             # A. 優先處理「手動指定」座位
             if self.manual_seats:
-                logger.info(f"優先嘗試手動指定座位: {self.manual_seats}")
-                matched_manual = [s for s in self.manual_seats if s in all_vacant]
+                # 確保手動輸入的也是整數
+                manual_targets = [int(s) for s in self.manual_seats]
+                logger.info(f"優先嘗試手動指定座位: {manual_targets}")
+                matched_manual = [s for s in manual_targets if s in all_vacant]
+                
                 if len(matched_manual) >= num_tickets:
                     selected_seats = matched_manual[:num_tickets]
                     logger.info(f"手動選位成功：{selected_seats}")
                 else:
-                    logger.warning(f"手動座位 {self.manual_seats} 目前無足夠空位。")
-                    # 如果手動選位失敗，且使用者要求「嚴格手動」，則可以在此 return False
-                    # 這裡我們先採「自動退而求其次」逻辑，您可以決定是否要跳過
+                    logger.warning(f"手動指定座位 {manual_targets} 目前無足夠空位，將轉為自動選位。")
             
             # B. 如果沒手動選位，或手動選位失敗，進入自動選位邏輯
             if not selected_seats:
