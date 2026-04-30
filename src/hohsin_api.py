@@ -130,9 +130,9 @@ class HohsinAPI:
         return []
 
 
-    async def book_ticket(self, schedule: Dict[str, Any], seat_no: int, ticket_kind_id: Optional[str] = None) -> Dict[str, Any]:
+    async def book_ticket(self, schedule: Dict[str, Any], seat_nos: List[int], ticket_kind_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        執行訂位動作。
+        執行訂位動作。支援多個座位。
         """
         if not self.access_token or not self.user_info:
             raise ValueError("執行訂位前必須先登入。")
@@ -145,6 +145,14 @@ class HohsinAPI:
             else:
                 ticket_kind_id = "S" # 萬一沒資料，回退到全票 S
 
+        # 建立座位節點清單
+        tickets_payload = []
+        for sn in seat_nos:
+            tickets_payload.append({
+                "ticketKindId": ticket_kind_id,
+                "seatNo": int(sn)
+            })
+
         url = f"{self.BASE_URL}/web/orders/book"
         payload = {
             "dailyScheduleId": schedule["dailyScheduleId"],
@@ -152,12 +160,7 @@ class HohsinAPI:
             "outofStationId": schedule["outofStationId"],
             "returnIntoStationId": "",
             "returnOutofStationId": "",
-            "tickets": [
-                {
-                    "ticketKindId": ticket_kind_id,
-                    "seatNo": int(seat_no)
-                }
-            ],
+            "tickets": tickets_payload,
             "memberId": self.user_info["id"],
             "passengerName": self.user_info.get("name", "使用者"),
             "passengerIdentityNo": self.user_info.get("identityNo", ""),
