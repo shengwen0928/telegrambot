@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import os
 import signal
@@ -19,15 +20,24 @@ logger = logging.getLogger("Main")
 async def main():
     load_dotenv()
     
-    # 讀取配置
-    from_stn = os.getenv("FROM_STATION", "G03")
-    to_stn = os.getenv("TO_STATION", "B01")
-    date = os.getenv("TRAVEL_DATE")
-    start_t = os.getenv("START_TIME", "00:00")
-    end_t = os.getenv("END_TIME", "23:59")
+    # 建立命令列參數解析器，並以 .env 環境變數為預設值 (確保既有功能 100% 不受影響)
+    parser = argparse.ArgumentParser(description="和欣客運自動搶票程式")
+    parser.add_argument("--from-station", type=str, default=os.getenv("FROM_STATION", "G03"), help="起點站 ID (如 G03)")
+    parser.add_argument("--to-station", type=str, default=os.getenv("TO_STATION", "B01"), help="終點站 ID (如 B01)")
+    parser.add_argument("--date", type=str, default=os.getenv("TRAVEL_DATE"), help="乘車日期 (如 2026-05-05)")
+    parser.add_argument("--start", type=str, default=os.getenv("START_TIME", "00:00"), help="開始時間區間 (如 00:00)")
+    parser.add_argument("--end", type=str, default=os.getenv("END_TIME", "23:59"), help="結束時間區間 (如 23:59)")
+    
+    args = parser.parse_args()
+
+    from_stn = args.from_station
+    to_stn = args.to_station
+    date = args.date
+    start_t = args.start
+    end_t = args.end
     
     if not date:
-        logger.error("錯誤：未在 .env 中設置 TRAVEL_DATE")
+        logger.error("錯誤：請在 .env 中設置 TRAVEL_DATE，或在執行時加上 --date 參數 (例如 --date 2026-05-05)")
         return
 
     monitor = HohsinMonitor(
