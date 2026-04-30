@@ -84,6 +84,20 @@ class LineNotifier:
             logger.error(f"LINE 推播失敗: {e}")
 
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
+# 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }
+user_states: Dict[str, Dict[str, Any]] = {}
+
+# 全域的和欣 API 實例 (用來抓車站)
+global_api = HohsinAPI()
+STATIONS_CACHE = []
+
+async def init_stations():
+    global STATIONS_CACHE
+    if not STATIONS_CACHE:
+        try:
+            STATIONS_CACHE = await global_api.get_stations()
+        except Exception as e:
+            logger.error(f"無法獲取車站清單: {e}")
 
 # 定義狀態機
 class States:
