@@ -2,8 +2,12 @@ import asyncio
 import os
 import signal
 import logging
+import src.hohsin_api
 from dotenv import load_dotenv
 from src.monitor import HohsinMonitor
+
+# 關鍵檢查：印出實體代碼路徑
+print(f"!!! [載入檢查] HohsinAPI 檔案路徑: {src.hohsin_api.__file__}")
 
 # 設定日誌
 logging.basicConfig(
