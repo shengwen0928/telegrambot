@@ -235,43 +235,59 @@ def handle_message(event):
 
     # 1. 啟動指令
     if text in ["搶票", "/start", "開始"]:
+        state["step"] = "waiting_for_bus"
+        reply = TextMessage(
+            text="歡迎使用自動搶票機器人！\n請先選擇您要搶票的客運：",
+            quick_reply=create_bus_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 2. 選擇客運
+    if state["step"] == "waiting_for_bus" and text == "客運:和欣":
+        state["bus"] = "hohsin"
+        
+        # 檢查是否有和欣客運的儲存帳密
         users = load_users()
-        if user_id in users:
+        if user_id in users and "hohsin" in users[user_id]:
             state["step"] = "waiting_for_credential_choice"
-            masked_phone = users[user_id].get("phone", "")
+            masked_phone = users[user_id]["hohsin"].get("phone", "")
             if len(masked_phone) >= 4:
                 masked_phone = masked_phone[:-4] + "****"
             reply = TextMessage(
-                text=f"歡迎回來！您有儲存的帳號 ({masked_phone})。\n請問要使用該帳號，還是輸入新帳密？",
+                text=f"您有儲存的【和欣客運】帳號 ({masked_phone})。\n請問要使用該帳號，還是輸入新帳密？",
                 quick_reply=create_credential_choice_quick_reply()
             )
         else:
             state["step"] = "waiting_for_phone"
-            reply = TextMessage(text="歡迎使用自動搶票機器人！\n為確保訂票成功，請輸入您的【和欣客運手機號碼】：")
+            reply = TextMessage(text="為確保訂票成功，請輸入您的【和欣客運手機號碼】：")
             
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
-    # 1.1 選擇是否使用儲存帳密
+    # 2.1 選擇是否使用儲存帳密
     if state["step"] == "waiting_for_credential_choice" and text.startswith("帳密:"):
         if text == "帳密:使用儲存":
             users = load_users()
-            state["phone"] = users[user_id]["phone"]
-            state["password"] = users[user_id]["password"]
+            state["phone"] = users[user_id]["hohsin"]["phone"]
+            state["password"] = users[user_id]["hohsin"]["password"]
             
-            state["step"] = "waiting_for_bus"
+            state["step"] = "waiting_for_from"
+            asyncio.create_task(init_stations())
             reply = TextMessage(
-                text="✅ 已載入帳密！\n請選擇您要搶票的客運：",
-                quick_reply=create_bus_quick_reply()
+                text="✅ 已載入帳密！\n請問您的 **上車站** 是哪裡？",
+                quick_reply=None # 清除快速回覆
             )
+            # 因為只能回傳一個 ReplyMessageRequest，我們把兩個訊息放進去
+            msgs = [reply, create_stations_carousel(STATIONS_CACHE, "上車")]
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
         else:
             state["step"] = "waiting_for_phone"
             reply = TextMessage(text="請輸入您的【和欣客運手機號碼】：")
-            
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
-    # 1.2 輸入手機
+    # 2.2 輸入手機
     if state["step"] == "waiting_for_phone":
         state["phone"] = text
         state["step"] = "waiting_for_password"
@@ -279,7 +295,7 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
-    # 1.3 輸入密碼
+    # 2.3 輸入密碼
     if state["step"] == "waiting_for_password":
         state["password"] = text
         state["step"] = "waiting_for_save_choice"
@@ -290,34 +306,23 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
-    # 1.4 選擇是否儲存
+    # 2.4 選擇是否儲存
     if state["step"] == "waiting_for_save_choice" and text.startswith("記憶:"):
         if text == "記憶:是":
             users = load_users()
-            users[user_id] = {
+            if user_id not in users:
+                users[user_id] = {}
+            users[user_id]["hohsin"] = {
                 "phone": state["phone"],
                 "password": state["password"]
             }
             save_users(users)
         
-        state["step"] = "waiting_for_bus"
-        reply = TextMessage(
-            text="設定完成！\n請選擇您要搶票的客運：",
-            quick_reply=create_bus_quick_reply()
-        )
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
-        return
-
-    # 2. 選擇客運
-    if state["step"] == "waiting_for_bus" and text == "客運:和欣":
-        state["bus"] = "hohsin"
         state["step"] = "waiting_for_from"
-        
-        # 確保車站資料已載入
         asyncio.create_task(init_stations())
-        
-        reply = create_stations_carousel(STATIONS_CACHE, "上車")
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        reply = TextMessage(text="✅ 帳密設定完成！\n請問您的 **上車站** 是哪裡？")
+        msgs = [reply, create_stations_carousel(STATIONS_CACHE, "上車")]
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
         return
 
     # 3. 選擇上車站
