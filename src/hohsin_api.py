@@ -102,32 +102,34 @@ class HohsinAPI:
         
         return False
 
-    async def get_seating_plans(self, schedule_id: int, into_station_id: str, outof_station_id: str) -> List[Dict[str, Any]]:
-        """獲取班次座位圖。"""
+    async def get_seating_plans(self, schedule_id: int, into_station_id: str, outof_station_id: str, travel_date: str = "", start_time: str = "00:00", end_time: str = "23:59") -> List[Dict[str, Any]]:
+        """獲取班次座位圖（根據真實封包重構）。"""
+        
         url = f"{self.BASE_URL}/web/schedules/{schedule_id}/seatingplans"
+        
+        # 根據真實封包，只需要起訖站 ID
         params = {
             "intoStationId": into_station_id,
             "outofStationId": outof_station_id
         }
 
-        # 優先使用登入後的 Token，如果沒登入則嘗試使用預設 Token
-        token = self.access_token or self.DEFAULT_TOKEN
         headers = self.headers.copy()
-        headers["Authorization"] = f"Bearer {token}"
+        headers["Authorization"] = f"Bearer {self.DEFAULT_TOKEN}"
+        headers["Referer"] = "https://www.ebus.com.tw/"
 
         response = await self.client.get(url, params=params, headers=headers)
-        if response.status_code != 200:
-            print(f"獲取座位圖失敗: {response.status_code}, 內容: {response.text}")
-        response.raise_for_status()
-        data = response.json()
         
+        if response.status_code != 200:
+            print(f"!!! [座位圖失敗] 狀態碼: {response.status_code} | 回應: {response.text[:100]}")
+            response.raise_for_status()
+
+        data = response.json()
         result = data.get("result")
         
-        # 處理 result 可能是字典 (含 items) 或直接是清單的情況
-        if isinstance(result, dict):
-            return result.get("items", [])
-        elif isinstance(result, list):
-            return result
+        if isinstance(result, dict) and "seatings" in result:
+            return result["seatings"]
+            
+        print(f"!!! [座位圖為空] 原始回應結構: {data}")
         return []
 
 

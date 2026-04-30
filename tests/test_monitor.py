@@ -38,18 +38,18 @@ async def test_monitor_flow():
     ]
     mock_api.get_schedules.return_value = mock_schedules
 
-    # 模擬座位圖 (有一個空位 status=0)
+    # 模擬座位圖 (有一個空位 ticketId=None)
     mock_seating_plan = [
-        {"seatNo": 1, "status": 1},
-        {"seatNo": 2, "status": 0}, # 空位
-        {"seatNo": 3, "status": 1}
+        {"seatNo": 1, "ticketId": 8168602},
+        {"seatNo": 2, "ticketId": None}, # 空位
+        {"seatNo": 3, "ticketId": 8168603}
     ]
     mock_api.get_seating_plans.return_value = mock_seating_plan
 
     # 模擬訂位成功
     mock_api.book_ticket.return_value = {"success": True, "result": "Order123"}
 
-    # 執行監控 (我們需要控制迴圈，所以只跑一兩次)
+    # 執行監控 (我們需要控制迴圈，所以只跑一兩次)      
     # 這裡可以透過 patch asyncio.sleep 來加速並在適當時機停止
     with patch("asyncio.sleep", AsyncMock()):
         await monitor.run()
@@ -57,9 +57,8 @@ async def test_monitor_flow():
     # 驗證步驟
     mock_api.login.assert_called()
     mock_api.get_schedules.assert_called_with("G03", "B01", "2026-05-01", "10:00", "12:00")
-    mock_api.get_seating_plans.assert_called_with(12345, "G03", "B01")
-    mock_api.book_ticket.assert_called_with(mock_schedules[0], 2)
-    
+    mock_api.get_seating_plans.assert_called_with(12345, "G03", "B01", travel_date="2026-05-01", start_time="10:00", end_time="12:00")
+    mock_api.book_ticket.assert_called_with(mock_schedules[0], 2)    
     # 驗證通知
     assert mock_notifier.send_message.call_count >= 2 # 啟動通知 + 成功通知
     last_call_args = mock_notifier.send_message.call_args[0][0]

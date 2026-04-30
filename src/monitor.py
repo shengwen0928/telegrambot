@@ -74,11 +74,14 @@ class HohsinMonitor:
             logger.info(f"發現可用班次: [{schedule_id}] {from_name} -> {to_name} ({departure_time})")
             logger.info(f"正在獲取座位圖，完整班次資料: {schedule}")
             
-            # 1. 獲取座位圖
+            # 1. 獲取座位圖 (傳入完整參數：日期 + 區間)
             seating_plans = await self.api.get_seating_plans(
                 schedule_id, 
                 schedule["intoStationId"], 
-                schedule["outofStationId"]
+                schedule["outofStationId"],
+                travel_date=self.travel_date,
+                start_time=self.start_time,
+                end_time=self.end_time
             )
             
             # 偵錯用：列出座位圖結構
@@ -88,11 +91,11 @@ class HohsinMonitor:
                 logger.warning("座位圖回傳為空。")
             
             # 2. 尋找第一個空位
-            # 根據常見 API 邏輯，result 列表中的物件包含 seatNo
-            # 我們假設 status=0 是空位，或是直接找沒有被佔用的序號
+            # 根據真實封包，座位清單直接是 [{"seatNo": 1, "ticketId": null}, ...]
+            # ticketId 為 null 表示是空位
             vacant_seat = None
             for seat in seating_plans:
-                if seat.get("status") == 0:
+                if seat.get("ticketId") is None:
                     vacant_seat = seat["seatNo"]
                     break
             
