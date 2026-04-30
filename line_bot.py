@@ -235,7 +235,7 @@ def handle_message(event):
 
     # 6. 選擇時段並啟動監控
     if state["step"] == "waiting_for_time" and text.startswith("時段:"):
-        time_range = text.split(":")[1] # ex: 00:00~03:00
+        time_range = text[3:] # ex: 00:00~03:00 (去掉前三個字 "時段:")
         start_t, end_t = time_range.split("~")
         
         state["start_time"] = start_t
