@@ -71,7 +71,7 @@ class HohsinMonitor:
         return False
 
     async def _auto_book(self, schedule: Dict[str, Any], num_tickets: int = 1) -> bool:
-        """執行自動選位與訂票，支援多張票。"""
+        """執行自動選位與訂票，支援多張票與自定義座位偏好。"""
         try:
             schedule_id = schedule["dailyScheduleId"]
             from_name = await self.api.get_station_name(schedule["intoStationId"])
@@ -90,15 +90,49 @@ class HohsinMonitor:
                 end_time=self.end_time
             )
             
-            # 2. 尋找足夠數量的空位
-            vacant_seats = [seat["seatNo"] for seat in seating_plans if seat.get("ticketId") is None]
-            
-            if len(vacant_seats) < num_tickets:
-                logger.warning(f"班次 {departure_time} 餘票不足。需要 {num_tickets} 張，僅剩 {len(vacant_seats)} 張。")
-                return False
-            
-            selected_seats = vacant_seats[:num_tickets]
-            
+            # 2. 定義座位偏好邏輯
+            all_vacant = [seat["seatNo"] for seat in seating_plans if seat.get("ticketId") is None]
+            selected_seats = []
+
+            if num_tickets == 2:
+                # 兩張票的連號優先級 (括號內為一組)
+                pair_groups = [
+                    (3, 4), (6, 7), (9, 10), (13, 14), (16, 17), (19, 20), (22, 23), (25, 26), # 第一優先
+                    (1, 2), (28, 29) # 第二優先
+                ]
+                
+                for p1, p2 in pair_groups:
+                    if p1 in all_vacant and p2 in all_vacant:
+                        selected_seats = [p1, p2]
+                        break
+                
+                if not selected_seats:
+                    logger.warning(f"班次 {departure_time} 雖有餘票，但無指定連號座位，跳過。")
+                    return False
+
+            elif num_tickets == 1:
+                # 單張票優先級
+                priority_single = [5, 1, 2]
+                for s in priority_single:
+                    if s in all_vacant:
+                        selected_seats = [s]
+                        break
+                
+                # 如果優先位都沒了，隨便抓一個
+                if not selected_seats and all_vacant:
+                    selected_seats = [all_vacant[0]]
+                
+                if not selected_seats:
+                    logger.warning(f"班次 {departure_time} 座位圖中無任何可用空位。")
+                    return False
+            else:
+                # 3張票以上暫不實作特殊邏輯，直接抓前 N 個
+                if len(all_vacant) >= num_tickets:
+                    selected_seats = all_vacant[:num_tickets]
+                else:
+                    logger.warning(f"班次 {departure_time} 餘票不足。")
+                    return False
+
             # 3. 執行訂票
             logger.info(f"選定座位: {selected_seats}，執行訂位...")
             result = await self.api.book_ticket(schedule, selected_seats)
