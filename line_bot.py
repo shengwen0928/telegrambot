@@ -146,35 +146,66 @@ def create_route_choice_quick_reply(favorites=None):
     return QuickReply(items=items)
 
 def create_favorites_carousel(favorites):
-    """建立常用站點輪播卡片 (包含選擇與刪除按鈕)"""
+    """建立精緻漂亮的常用站點輪播卡片 (Flex Message)"""
     bubbles = []
     for i, fav in enumerate(favorites):
-        bubbles.append({
+        # 拆分起訖站名稱
+        stn_parts = fav["name"].split("-")
+        from_name = stn_parts[0] if len(stn_parts) > 0 else "未知"
+        to_name = stn_parts[1] if len(stn_parts) > 1 else "未知"
+
+        bubble = {
             "type": "bubble",
-            "size": "micro",
+            "size": "kilo",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {"type": "text", "text": "⭐ 常用路線", "color": "#ffffff", "weight": "bold", "size": "sm"}
+                ],
+                "backgroundColor": "#00b900"
+            },
             "body": {
                 "type": "box",
                 "layout": "vertical",
                 "contents": [
-                    {"type": "text", "text": fav["name"], "weight": "bold", "align": "center"},
                     {
-                        "type": "button", 
-                        "action": {"type": "message", "label": "選此路線", "text": f"常用路線:{i}"}, 
-                        "style": "primary", 
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": from_name, "weight": "bold", "size": "lg", "flex": 0},
+                            {"type": "text", "text": "➡️", "size": "sm", "color": "#aaaaaa", "align": "center", "gravity": "center"},
+                            {"type": "text", "text": to_name, "weight": "bold", "size": "lg", "flex": 0}
+                        ],
+                        "justifyContent": "space-between",
+                        "alignItems": "center"
+                    },
+                    {"type": "separator", "margin": "md"},
+                    {
+                        "type": "button",
+                        "action": {"type": "message", "label": "立刻搶票", "text": f"常用路線:{i}"},
+                        "style": "primary",
+                        "color": "#00b900",
                         "margin": "md",
                         "height": "sm"
                     },
                     {
-                        "type": "button", 
-                        "action": {"type": "message", "label": "🗑️ 刪除", "text": f"刪除路線:{i}"}, 
-                        "style": "secondary", 
+                        "type": "button",
+                        "action": {"type": "message", "label": "🗑️ 刪除此紀錄", "text": f"刪除路線:{i}"},
+                        "style": "link",
+                        "color": "#ff4d4f",
                         "margin": "sm",
                         "height": "sm"
                     }
                 ]
             }
-        })
-    return FlexMessage(alt_text="常用站點管理選單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
+        }
+        bubbles.append(bubble)
+
+    return FlexMessage(
+        alt_text="⭐ 您的常用路線清單",
+        contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles})
+    )
 
 def create_bus_quick_reply():
     """建立客運選擇的 Quick Reply"""

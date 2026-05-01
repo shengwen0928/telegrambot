@@ -1,31 +1,56 @@
-PS C:\Users\admin\Desktop\和欣搶票程序> python main.py
-!!! [載入檢查] HohsinAPI 檔案路徑: C:\Users\admin\Desktop\和欣搶票程序\src\hohsin_api.py
-2026-04-30 08:43:00,237 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-04-30 08:43:00,237 - HohsinMonitor - INFO - 🚀 監控啟動
-路線：台北總站 (G03) -> 臺南轉運站 (B01)
-日期：2026-05-05
-範圍：00:00 - 23:59
-2026-04-30 08:43:01,432 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot8602736283:AAFaukXTINCjPgWUPnxf2QlGkiFMPb2571k/sendMessage "HTTP/1.1 200 OK"
-2026-04-30 08:43:01,432 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
-2026-04-30 08:43:01,484 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-04-30 08:43:01,502 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-04-30 08:43:01,620 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-04-30 08:43:01,732 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-04-30 08:43:01,732 - HohsinMonitor - INFO - 登入成功！
-2026-04-30 08:43:02,425 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 08:43:02,426 - HohsinMonitor - INFO - 發現可用班次: [348406] 台北總站 -> 臺南轉運站 (2026-05-05T00:00:00)
-2026-04-30 08:43:02,426 - HohsinMonitor - INFO - 正在獲取座位圖，完整班次資料: {'dailyScheduleId': 348406, 'operatingLineId': 'L0008', 'operatingLineDescription': '台北->台南', 'scheduleDepartureDate': '2026-05-05T00:00:00', 'scheduleDepartureTime': '00:00:00', 'busSpecificationId': '16B', 'busSpecificationRows': 2, 'cabinLevel': '二排 16 座', 'isNonStop': False, 'intoStationId': 'G03', 'intoStationOperatingName': '台北總站', 'intoStationDepartureTime': '2026-05-05T00:00:00', 'outofStationId': 'B01', 'outofStationOperatingName': '臺南轉運站', 'isTwiceTicket': False, 'vacantSeats': 12, 'maxTicketDollar': 560, 'ticketPrices': [{'ticketKindId': 'N', 'ticketKindDescription': '促銷票', 'ticketDollars': 560}, {'ticketKindId': 'H', 'ticketKindDescription': '半票', 'ticketDollars': 380}], 'sellStatus': 'CanOrderSell'}
-2026-04-30 08:43:02,584 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 08:43:02,736 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01&departureDate=2026-05-05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-!!! [座位圖為空] 已嘗試參數: {'intoStationId': 'G03', 'outofStationId': 'B01', 'departureDate': '2026-05-05', 'beginDepartureTime': '00:00', 'endDepartureTime': '23:59'}
-2026-04-30 08:43:02,737 - HohsinMonitor - WARNING - 座位圖回傳為空。
-2026-04-30 08:43:02,737 - HohsinMonitor - WARNING - 班次 2026-05-05T00:00:00 雖然顯示有餘票，但座位圖中無可用空位。
-2026-04-30 08:43:05,593 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 08:43:05,594 - HohsinMonitor - INFO - 發現可用班次: [348406] 台北總站 -> 臺南轉運站 (2026-05-05T00:00:00)
-2026-04-30 08:43:05,594 - HohsinMonitor - INFO - 正在獲取座位圖，完整班次資料: {'dailyScheduleId': 348406, 'operatingLineId': 'L0008', 'operatingLineDescription': '台北->台南', 'scheduleDepartureDate': '2026-05-05T00:00:00', 'scheduleDepartureTime': '00:00:00', 'busSpecificationId': '16B', 'busSpecificationRows': 2, 'cabinLevel': '二排 16 座', 'isNonStop': False, 'intoStationId': 'G03', 'intoStationOperatingName': '台北總站', 'intoStationDepartureTime': '2026-05-05T00:00:00', 'outofStationId': 'B01', 'outofStationOperatingName': '臺南轉運站', 'isTwiceTicket': False, 'vacantSeats': 12, 'maxTicketDollar': 560, 'ticketPrices': [{'ticketKindId': 'N', 'ticketKindDescription': '促銷票', 'ticketDollars': 560}, {'ticketKindId': 'H', 'ticketKindDescription': '半票', 'ticketDollars': 380}], 'sellStatus': 'CanOrderSell'}
-2026-04-30 08:43:05,746 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-2026-04-30 08:43:05,906 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules/348406/seatingplans?intoStationId=G03&outofStationId=B01&departureDate=2026-05-05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
-!!! [座位圖為空] 已嘗試參數: {'intoStationId': 'G03', 'outofStationId': 'B01', 'departureDate': '2026-05-05', 'beginDepartureTime': '00:00', 'endDepartureTime': '23:59'}
-2026-04-30 08:43:05,906 - HohsinMonitor - WARNING - 座位圖回傳為空。
-2026-04-30 08:43:05,906 - HohsinMonitor - WARNING - 班次 2026-05-05T00:00:00 雖然顯示有餘票，但座位圖中無可用空位。
-2026-04-30 08:43:08,043 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=G03&outofStationId=B01&departureDate=2026%2F05%2F05&beginDepartureTime=00%3A00&endDepartureTime=23%3A59 "HTTP/1.1 200 OK"
+(venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
+Traceback (most recent call last):
+  File "/home/ad565198ad56519867/telegrambot/venv/bin/uvicorn", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 441, in main
+    run(
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 617, in run
+    server.run()
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
+    await self._serve(sockets)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
+    config.load()
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/config.py", line 449, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 91, in <module>
+    running_tasks: Dict[str, List[HohsinMonitor]] = {}
+                             ^^^^
+NameError: name 'List' is not defined. Did you mean: 'list'?
