@@ -260,15 +260,30 @@ def create_date_picker_quick_reply():
         ))
     ])
 
-def create_times_quick_reply():
-    """建立時段選擇的 Quick Reply"""
-    times = [
-        "00:00~03:00", "03:00~06:00", "06:00~09:00", "09:00~12:00",
-        "12:00~15:00", "15:00~18:00", "18:00~21:00", "21:00~23:59"
+def create_times_quick_reply(selected_date: str):
+    """建立時段選擇的 Quick Reply (自動過濾當天已過去的時段)"""
+    all_times = [
+        ("00:00~03:00", "03:00"), ("03:00~06:00", "06:00"), 
+        ("06:00~09:00", "09:00"), ("09:00~12:00", "12:00"),
+        ("12:00~15:00", "15:00"), ("15:00~18:00", "18:00"), 
+        ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
     ]
+    
+    now = datetime.now()
+    is_today = selected_date == now.strftime("%Y-%m-%d")
+    current_time_str = now.strftime("%H:%M")
+
     items = []
-    for t in times:
-        items.append(QuickReplyItem(action=MessageAction(label=t, text=f"時段:{t}")))
+    for display, end_time in all_times:
+        # 如果是今天，且目前的時分已經超過時段的結束時間，就隱藏
+        if is_today and current_time_str > end_time:
+            continue
+        items.append(QuickReplyItem(action=MessageAction(label=display, text=f"時段:{display}")))
+    
+    # 如果過濾完發現沒時段了 (例如 23:59 之後)
+    if not items:
+        return None
+        
     return QuickReply(items=items)
 
 def create_ticket_count_quick_reply():
@@ -634,16 +649,27 @@ def handle_postback(event):
     state = user_states[user_id]
     
     # 5. 處理日期選擇
-    if state["step"] == "waiting_for_date" and event.postback.data == "action=select_date":
+    if state["step"] == States.WAITING_FOR_DATE and event.postback.data == "action=select_date":
         selected_date = event.postback.params['date'] # 格式 YYYY-MM-DD
         state["date"] = selected_date
         state["step"] = "waiting_for_time"
-        
-        reply = TextMessage(
-            text=f"📅 已選擇日期：{selected_date}\n\n最後一步，請選擇乘車時段：",
-            quick_reply=create_times_quick_reply()
-        )
+
+        times_qr = create_times_quick_reply(selected_date)
+        if times_qr:
+            reply = TextMessage(
+                text=f"📅 已選擇日期：{selected_date}\n\n最後一步，請選擇乘車時段：",
+                quick_reply=times_qr
+            )
+        else:
+            # 如果是今天且已經過了 23:59
+            state["step"] = States.WAITING_FOR_DATE # 退回日期選擇
+            reply = TextMessage(
+                text=f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的所有時段皆已過去，請選擇其他日期。",
+                quick_reply=create_date_picker_quick_reply()
+            )
+
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+
 
 # --- 啟動設定 ---
 @app.on_event("startup")
