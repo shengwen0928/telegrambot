@@ -572,8 +572,12 @@ def handle_message(event):
         state.update({"from_stn": fav["from"], "to_stn": fav["to"], "from_stn_name": fav["name"].split("-")[0], "to_stn_name": fav["name"].split("-")[1], "is_favorite_route": True, "step": States.WAITING_FOR_DATE})
         
         contents = [{"type": "text", "text": f"⭐ 已選常用路線：\n{fav['name']}\n\n請點擊下方按鈕選擇乘車日期。", "wrap": True, "size": "sm"}]
-        card = FlexMessage(alt_text="選擇日期", contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)))
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="點此選日期：", quick_reply=create_date_picker_quick_reply())]))
+        card = FlexMessage(
+            alt_text="選擇日期", 
+            contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)),
+            quick_reply=create_date_picker_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
     # 3. 選擇上車站
@@ -589,8 +593,12 @@ def handle_message(event):
         state.update({"to_stn": stn_id, "to_stn_name": get_station_name(stn_id), "step": States.WAITING_FOR_DATE})
         
         contents = [{"type": "text", "text": f"📍 路線：{state['from_stn_name']} ➡️ {state['to_stn_name']}\n\n請點擊下方按鈕選擇乘車日期。", "wrap": True, "size": "sm"}]
-        card = FlexMessage(alt_text="選擇日期", contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)))
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="點此選日期：", quick_reply=create_date_picker_quick_reply())]))
+        card = FlexMessage(
+            alt_text="選擇日期", 
+            contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)),
+            quick_reply=create_date_picker_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
     # 6. 選擇時段
@@ -598,8 +606,12 @@ def handle_message(event):
         state.update({"time_range": text[3:], "step": States.WAITING_FOR_COUNT})
         
         contents = [{"type": "text", "text": f"⏰ 已選時段：{state['time_range']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
-        card = FlexMessage(alt_text="選擇張數", contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)))
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="請選擇張數：", quick_reply=create_ticket_count_quick_reply())]))
+        card = FlexMessage(
+            alt_text="選擇張數", 
+            contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
+            quick_reply=create_ticket_count_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
     # 7. 選擇張數
@@ -607,8 +619,12 @@ def handle_message(event):
         state.update({"num_tickets": int(text.split(":")[1]), "step": States.WAITING_FOR_SEAT_MODE})
         
         contents = [{"type": "text", "text": f"🎫 購票張數：{state['num_tickets']} 張\n\n請問您要使用自動選位還是手動指定？", "wrap": True, "size": "sm"}]
-        card = FlexMessage(alt_text="選位模式", contents=FlexContainer.from_dict(create_base_flex_card("🤖 選位設定", contents)))
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="請選擇方式：", quick_reply=create_seat_mode_quick_reply())]))
+        card = FlexMessage(
+            alt_text="選位模式", 
+            contents=FlexContainer.from_dict(create_base_flex_card("🤖 選位設定", contents)),
+            quick_reply=create_seat_mode_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
     # 8. 選擇選位模式
@@ -626,8 +642,12 @@ def handle_message(event):
         else:
             state["step"] = States.WAITING_FOR_SAVE_ROUTE
             contents = [{"type": "text", "text": "🤖 已選擇自動選位。\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
-            card = FlexMessage(alt_text="存為常用", contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)))
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="是否儲存？", quick_reply=create_save_route_quick_reply())]))
+            card = FlexMessage(
+                alt_text="存為常用", 
+                contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)),
+                quick_reply=create_save_route_quick_reply()
+            )
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
     # 9. 輸入手動座號
@@ -661,7 +681,7 @@ def handle_message(event):
 
 @handler.add(PostbackEvent)
 def handle_postback(event):
-    """處理 LINE Date Picker 回傳的資料"""
+    """處理 LINE Date Picker 回傳的資料 (全卡片化)"""
     user_id = event.source.user_id
     if user_id not in user_states:
         return
@@ -676,19 +696,22 @@ def handle_postback(event):
 
         times_qr = create_times_quick_reply(selected_date)
         if times_qr:
-            reply = TextMessage(
-                text=f"📅 已選擇日期：{selected_date}\n\n最後一步，請選擇乘車時段：",
+            contents = [{"type": "text", "text": f"📅 已選日期：{selected_date}\n\n最後一步，請選擇乘車時段：", "wrap": True, "size": "sm"}]
+            card = FlexMessage(
+                alt_text="選擇時段", 
+                contents=FlexContainer.from_dict(create_base_flex_card("⏰ 時段設定", contents)),
                 quick_reply=times_qr
             )
         else:
-            # 如果是今天且已經過了 23:59
-            state["step"] = States.WAITING_FOR_DATE # 退回日期選擇
-            reply = TextMessage(
-                text=f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的所有時段皆已過去，請選擇其他日期。",
+            state["step"] = States.WAITING_FOR_DATE
+            contents = [{"type": "text", "text": f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的時段皆已截止，請選擇其他日期。", "wrap": True, "size": "sm", "color": DANGER_COLOR}]
+            card = FlexMessage(
+                alt_text="時段已截止", 
+                contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)),
                 quick_reply=create_date_picker_quick_reply()
             )
 
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
 
 
 # --- 啟動設定 ---
