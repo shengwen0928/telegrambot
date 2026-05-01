@@ -142,7 +142,7 @@ def create_route_choice_quick_reply(favorites=None):
     return QuickReply(items=items)
 
 def create_favorites_carousel(favorites):
-    """建立常用站點輪播卡片"""
+    """建立常用站點輪播卡片 (包含選擇與刪除按鈕)"""
     bubbles = []
     for i, fav in enumerate(favorites):
         bubbles.append({
@@ -153,11 +153,24 @@ def create_favorites_carousel(favorites):
                 "layout": "vertical",
                 "contents": [
                     {"type": "text", "text": fav["name"], "weight": "bold", "align": "center"},
-                    {"type": "button", "action": {"type": "message", "label": "選此路線", "text": f"常用路線:{i}"}, "style": "primary", "margin": "md"}
+                    {
+                        "type": "button", 
+                        "action": {"type": "message", "label": "選此路線", "text": f"常用路線:{i}"}, 
+                        "style": "primary", 
+                        "margin": "md",
+                        "height": "sm"
+                    },
+                    {
+                        "type": "button", 
+                        "action": {"type": "message", "label": "🗑️ 刪除", "text": f"刪除路線:{i}"}, 
+                        "style": "secondary", 
+                        "margin": "sm",
+                        "height": "sm"
+                    }
                 ]
             }
         })
-    return FlexMessage(alt_text="常用站點選單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
+    return FlexMessage(alt_text="常用站點管理選單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
 def create_bus_quick_reply():
     """建立客運選擇的 Quick Reply"""
@@ -385,7 +398,10 @@ def handle_message(event):
     if state["step"] == States.WAITING_FOR_ROUTE_CHOICE:
         if text == "路線:常用":
             favs = users.get(user_id, {}).get("favorites", [])
-            reply = create_favorites_carousel(favs)
+            if not favs:
+                reply = TextMessage(text="您目前沒有常用站點紀錄，請選擇「全新搜尋」來建立一筆！", quick_reply=create_route_choice_quick_reply())
+            else:
+                reply = create_favorites_carousel(favs)
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
             return
         elif text == "路線:全新":
@@ -395,6 +411,20 @@ def handle_message(event):
             msgs = [reply, create_stations_carousel(STATIONS_CACHE, "上車")]
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=msgs))
             return
+
+    # 2.7 刪除常用路線
+    if text.startswith("刪除路線:"):
+        idx = int(text.split(":")[1])
+        if user_id in users and "favorites" in users[user_id]:
+            if 0 <= idx < len(users[user_id]["favorites"]):
+                removed = users[user_id]["favorites"].pop(idx)
+                save_users(users)
+                reply = TextMessage(
+                    text=f"🗑️ 已刪除常用路線：{removed['name']}\n\n您可以繼續使用其他常用站點，或選擇全新搜尋。",
+                    quick_reply=create_route_choice_quick_reply(users[user_id]["favorites"])
+                )
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+                return
 
     # 2.6 選擇常用路線
     if state["step"] == States.WAITING_FOR_ROUTE_CHOICE and text.startswith("常用路線:"):
