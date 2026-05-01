@@ -71,18 +71,72 @@ api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
+def create_success_card(text: str):
+    """將搶票成功的純文字轉換為超級精緻的金色通知卡片"""
+    # 預期 text 格式：🎉 搶票成功！\n日期：...\n班次：...\n張數：...\n座位：...
+    lines = text.split("\n")
+    title = lines[0] if len(lines) > 0 else "🎉 搶票成功"
+    
+    details = []
+    for line in lines[1:]:
+        if "：" in line:
+            key, val = line.split("：", 1)
+            details.append({
+                "type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": key, "size": "sm", "color": "#aaaaaa", "flex": 2},
+                    {"type": "text", "text": val, "size": "sm", "color": "#111111", "flex": 4, "weight": "bold"}
+                ]
+            })
+
+    card = {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box", "layout": "vertical", "backgroundColor": "#FFD700", # 金色
+            "contents": [{"type": "text", "text": "🎊 訂票成功確認函", "color": "#8B4513", "weight": "bold", "size": "md", "align": "center"}]
+        },
+        "body": {
+            "type": "box", "layout": "vertical", "spacing": "md",
+            "contents": [
+                {"type": "text", "text": "恭喜您！系統已成功完成訂位：", "size": "xs", "color": "#666666"},
+                {"type": "box", "layout": "vertical", "spacing": "sm", "contents": details},
+                {"type": "separator", "margin": "lg"},
+                {"type": "text", "text": "請記得於規定時間內前往官網或車站取票付款，祝您旅途愉快！", "size": "xxs", "color": "#aaaaaa", "wrap": True, "margin": "md"}
+            ]
+        }
+    }
+    return FlexMessage(alt_text="🎊 搶票成功通知", contents=FlexContainer.from_dict(card))
+
 class LineNotifier:
     """專門為 LINE 打造的通知模組"""
     def __init__(self, user_id: str):
         self.user_id = user_id
 
     async def send_message(self, text: str):
-        """非同步發送訊息 (使用 Push Message)"""
+        """非同步發送訊息 (自動辨識成功訊息並轉為卡片)"""
         try:
-            req = PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)])
+            if "🎉 搶票成功" in text:
+                msg = create_success_card(text)
+            else:
+                # 錯誤或其他提示則使用一般的紅/綠卡片
+                title = "⚠️ 系統通知" if "❌" in text or "⚠️" in text else "📢 狀態更新"
+                color = DANGER_COLOR if "❌" in text or "⚠️" in text else THEME_COLOR
+                contents = [{"type": "text", "text": text, "wrap": True, "size": "sm"}]
+                msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(create_base_flex_card(title, contents)))
+                # 如果只是單純狀態更新，顏色維持綠色
+                if color == THEME_COLOR:
+                    msg.contents.header.background_color = THEME_COLOR
+                else:
+                    msg.contents.header.background_color = DANGER_COLOR
+
+            req = PushMessageRequest(to=self.user_id, messages=[msg])
             line_bot_api.push_message(req)
         except Exception as e:
             logger.error(f"LINE 推播失敗: {e}")
+            # 回退機制：萬一 Flex 失敗，發送純文字
+            try:
+                line_bot_api.push_message(PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)]))
+            except: pass
 
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }
