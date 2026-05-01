@@ -17,8 +17,9 @@ class TaiwanRailwayAPI:
         self.headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
             "Origin": "https://tip.railway.gov.tw",
-            "Referer": "https://tip.railway.gov.tw/tra-tip-web/tip/tip008/tip811/memberLogin"
+            "Referer": "https://tip.railway.gov.tw/tra-tip-web/tip"
         }
         self.client = httpx.AsyncClient(timeout=30.0, follow_redirects=True, headers=self.headers, verify=False)
         self.ocr = OCREngine()
@@ -33,11 +34,11 @@ class TaiwanRailwayAPI:
             response = await self.client.get(login_page_url)
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            csrf = soup.select_one('input[name="_csrf"]')
-            action_token = soup.select_one('input[name="action-token"]')
+            csrf = soup.find('input', {'name': '_csrf'})
+            action_token = soup.find('input', {'name': 'action-token'})
             
-            if not csrf or not action_token:
-                logger.error("無法獲取登入所需的 Token (CSRF 或 action-token)")
+            if not csrf:
+                logger.error(f"無法獲取登入所需的 CSRF Token。頁面長度: {len(response.text)}，開頭: {response.text[:500]}")
                 return False
 
             url = f"{self.BASE_URL}/login"
@@ -46,7 +47,7 @@ class TaiwanRailwayAPI:
                 "pType": "",
                 "username": username,
                 "password": password,
-                "action-token": action_token['value'],
+                "action-token": action_token['value'] if action_token else "",
                 "action-name": "submit_form"
             }
 
@@ -66,21 +67,24 @@ class TaiwanRailwayAPI:
 
     async def init_session(self):
         """訪問查詢頁面以獲取 CSRF Token 與 Session。"""
-        url = f"{self.BASE_URL}/tip001/tip123/query"
-        response = await self.client.get(url)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        csrf_input = soup.select_one('input[name="_csrf"]')
-        if csrf_input:
-            self.csrf_token = csrf_input['value']
-            logger.info(f"成功獲取 CSRF Token: {self.csrf_token[:8]}...")
-        
-        # 獲取完成 Token (如有)
-        complete_token = soup.select_one('input[name="completeToken"]')
-        self.complete_token = complete_token['value'] if complete_token else ""
-        
-        return response.text
+        try:
+            url = f"{self.BASE_URL}/tip001/tip123/query"
+            response = await self.client.get(url)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'html.parser')
+            csrf = soup.find('input', {'name': '_csrf'})
+            if csrf:
+                self.csrf_token = csrf['value']
+                logger.info(f"成功獲取查詢頁面 CSRF Token: {self.csrf_token[:8]}...")
+            
+            complete = soup.find('input', {'name': 'completeToken'})
+            self.complete_token = complete['value'] if complete else ""
+            
+            return response.text
+        except Exception as e:
+            logger.error(f"初始化 Session 失敗: {e}")
+            return ""
 
     async def get_captcha(self) -> bytes:
         """獲取圖形驗證碼。"""

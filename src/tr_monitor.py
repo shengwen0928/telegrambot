@@ -84,7 +84,8 @@ class TaiwanRailwayMonitor:
                     
                     if success:
                         msg = f"🎊 台鐵搶票成功！\n車次：{target_train['train_no']}\n日期：{self.travel_date}\n區間：{self.from_station} -> {self.to_station}\n請儘速至台鐵官網付款。"
-                        await self.notifier.send_message(msg)
+                        await self.notifier.send_message(msg)    
+
                         self.is_running = False
                         break
                     else:

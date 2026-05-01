@@ -707,7 +707,7 @@ def handle_message(event):
             return
 
         if state.get("is_favorite_route"):
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="任務啟動", contents=FlexContainer.from_dict(start_monitor_task(user_id, state, users)))]))
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
         else:
             state["step"] = States.WAITING_FOR_SAVE_ROUTE
             contents = [{"type": "text", "text": "🤖 已選擇自動選位。\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
@@ -725,7 +725,7 @@ def handle_message(event):
             seats = [int(s.strip()) for s in text.replace("，", ",").split(",")]
             state.update({"manual_seats": seats, "seat_mode": "manual"})
             if state.get("is_favorite_route"):
-                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="任務啟動", contents=FlexContainer.from_dict(start_monitor_task(user_id, state, users)))]))
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
             else:
                 state["step"] = States.WAITING_FOR_SAVE_ROUTE
                 contents = [{"type": "text", "text": f"✅ 已指定座位：{seats}\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
@@ -748,7 +748,7 @@ def handle_message(event):
             if not any(f["from"] == state["from_stn"] and f["to"] == state["to_stn"] for f in users[user_id]["favorites"]):
                 users[user_id]["favorites"].append({"from": state["from_stn"], "to": state["to_stn"], "name": f"{state['from_stn_name']}-{state['to_stn_name']}"})
                 save_users(users)
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="任務啟動", contents=FlexContainer.from_dict(start_monitor_task(user_id, state, users)))]))
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
         return
 
 
