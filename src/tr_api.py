@@ -65,33 +65,83 @@ class TaiwanRailwayAPI:
             logger.error(f"登入過程發生異常: {str(e)}")
             return False
 
-    async def init_session(self):
-        """訪問查詢頁面以獲取 CSRF Token 與 Session。"""
+    async def init_session(self, mode: str = "personal"):
+        """
+        初始化 Session 並獲取 CSRF/Token。
+        mode: "personal" (tip123) 或 "quick" (tip121)
+        """
         try:
-            url = f"{self.BASE_URL}/tip001/tip123/query"
+            path = "tip123" if mode == "personal" else "tip121"
+            url = f"{self.BASE_URL}/tip001/{path}/query"
             response = await self.client.get(url)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # 獲取 CSRF
             csrf = soup.find('input', {'name': '_csrf'})
             if csrf:
                 self.csrf_token = csrf['value']
-                logger.info(f"成功獲取查詢頁面 CSRF Token: {self.csrf_token[:8]}...")
+                logger.info(f"獲取 {mode} CSRF 成功: {self.csrf_token[:8]}...")
             
-            complete = soup.find('input', {'name': 'completeToken'})
-            self.complete_token = complete['value'] if complete else ""
+            # 獲取 Complete Token (tip123 用) 或 Quick Token (tip121 用)
+            token_name = "completeToken" if mode == "personal" else "quickTipToken"
+            token_input = soup.find('input', {'name': token_name})
+            self.complete_token = token_input['value'] if token_input else ""
+            
+            if not self.complete_token:
+                logger.warning(f"未能獲取 {token_name}，這可能會導致 POST 失敗。")
             
             return response.text
         except Exception as e:
-            logger.error(f"初始化 Session 失敗: {e}")
+            logger.error(f"初始化 {mode} Session 失敗: {e}")
             return ""
 
-    async def get_captcha(self) -> bytes:
-        """獲取圖形驗證碼。"""
-        url = f"{self.BASE_URL}/player/picture"
-        response = await self.client.get(url)
-        response.raise_for_status()
-        return response.content
+    async def guest_book_ticket(self, pid: str, from_stn: str, to_stn: str, date: str, start_time: str, end_time: str) -> bool:
+        """
+        使用「快速訂票 (訪客模式)」直接訂票。
+        """
+        try:
+            # 1. 初始化快速訂票 Session
+            await self.init_session(mode="quick")
+            
+            url = f"{self.BASE_URL}/tip001/tip121/bookingTicket"
+            
+            from_full = f"{from_stn}-{TR_STATIONS.get(from_stn, '')}"
+            to_full = f"{to_stn}-{TR_STATIONS.get(to_stn, '')}"
+            
+            payload = {
+                "_csrf": self.csrf_token,
+                "custIdTypeEnum": "PERSON_ID",
+                "pid": pid,
+                "startStation": from_full,
+                "endStation": to_full,
+                "tripType": "ONEWAY",
+                "orderType": "BY_TIME",
+                "normalQty": "1",
+                "ticketOrderParamList[0].tripNo": "TRIP1",
+                "ticketOrderParamList[0].rideDate": date.replace("-", "/"),
+                "ticketOrderParamList[0].startOrEndTime": "true",
+                "ticketOrderParamList[0].startTime": start_time,
+                "ticketOrderParamList[0].endTime": end_time,
+                "quickTipToken": self.complete_token, # 在 quick 模式下這存的是 quickTipToken
+                "action-name": "submit_form"
+            }
+            
+            # 台鐵快速訂票通常會直接回傳結果
+            resp = await self.client.post(url, data=payload)
+            
+            if "訂票成功" in resp.text or "成功代碼" in resp.text:
+                logger.info("訪客訂票可能成功，請檢查日誌或手機。")
+                return True
+            
+            if "error=true" in str(resp.url) or "請輸入正確" in resp.text:
+                logger.error("訪客訂票失敗：參數錯誤或驗證碼攔截。")
+            
+            return False
+        except Exception as e:
+            logger.error(f"訪客訂票發生異常: {e}")
+            return False
 
     async def query_trains(self, from_stn: str, to_stn: str, date: str, start_time: str, end_time: str) -> List[Dict[str, Any]]:
         """查詢班次。"""

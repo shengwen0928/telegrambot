@@ -1,54 +1,30 @@
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
-    await route.handle(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 120, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 674, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 400, in callback
-    handler.handle(body_str, signature)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 242, in handle
-    self.__invoke_func(func, event, payload)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 254, in __invoke_func
-    func(event)
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 529, in handle_message
-    line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_task_list_carousel(tasks)]))
-                                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 375, in create_task_list_carousel
-    {"type": "text", "text": f"📍 {m.from_station} ➡️  {m.to_station}", "weight": "bold", "size": "sm"},
-                                  ^^^^^^^^^^^^^^
-AttributeError: 'TaiwanRailwayMonitor' object has no attribute 'from_station'
-2026-05-01 09:33:20,279 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/queryTrain "HTTP/1.1 302 Moved Temporarily"
-2026-05-01 09:33:20,752 - httpx - INFO - HTTP Request: GET https://tip.railway.gov
+(venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
+INFO:     Started server process [41125]
+INFO:     Waiting for application startup.
+2026-05-01 10:57:40,769 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-01 10:57:40,770 - LineBot - INFO - LINE Bot 伺服器已啟動！
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-01 10:58:17,603 - TR_Monitor - INFO - 開始監控台鐵：2026-05-09 0900->1080
+2026-05-01 10:58:18,374 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip008/tip811/memberLogin "HTTP/1.1 200 OK"
+2026-05-01 10:58:19,230 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/login "HTTP/1.1 302 Moved Temporarily"
+2026-05-01 10:58:19,709 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip008/tip811/memberLogin?error=true "HTTP/1.1 200 OK"
+2026-05-01 10:58:19,857 - TR_API - ERROR - 台鐵登入失敗，回傳狀態碼: 200
+2026-05-01 10:58:20,559 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/query "HTTP/1.1 200 OK"
+2026-05-01 10:58:21,214 - TR_API - INFO - 成功獲取查詢頁面 CSRF Token: 21d68768...
+2026-05-01 10:58:21,682 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/queryTrain "HTTP/1.1 302 Moved Temporarily"
+2026-05-01 10:58:22,169 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/query "HTTP/1.1 200 OK"
+2026-05-01 10:58:22,946 - TR_Monitor - INFO - 未找到符合條件的班次，等待下次查詢...
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
