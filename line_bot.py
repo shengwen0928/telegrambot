@@ -3,7 +3,7 @@ import asyncio
 import logging
 import json
 from datetime import datetime, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
