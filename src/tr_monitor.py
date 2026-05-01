@@ -21,9 +21,9 @@ class TaiwanRailwayMonitor:
         train_no: Optional[str] = None
     ):
         self.api = TaiwanRailwayAPI()
-        self.from_stn = from_station
-        self.to_stn = to_station
-        self.date = travel_date
+        self.from_station = from_station
+        self.to_station = to_station
+        self.travel_date = travel_date
         self.start_time = start_time
         self.end_time = end_time
         self.notifier = notifier
@@ -38,7 +38,7 @@ class TaiwanRailwayMonitor:
 
     async def run(self):
         """主監控循環。"""
-        logger.info(f"開始監控台鐵：{self.date} {self.from_stn}->{self.to_stn}")
+        logger.info(f"開始監控台鐵：{self.travel_date} {self.from_station}->{self.to_station}")
         
         # 1. 嘗試登入 (台鐵會員登入可增加成功率)
         is_logged_in = False
@@ -55,7 +55,7 @@ class TaiwanRailwayMonitor:
             try:
                 # 1. 搜尋班次
                 trains = await self.api.query_trains(
-                    self.from_stn, self.to_stn, self.date, self.start_time, self.end_time
+                    self.from_station, self.to_station, self.travel_date, self.start_time, self.end_time
                 )
                 
                 if not trains:
@@ -79,11 +79,11 @@ class TaiwanRailwayMonitor:
                     # 2. 執行訂票
                     success = await self.api.book_ticket(
                         self.user_id_no, target_train['train_no'], 
-                        self.from_stn, self.to_stn, self.date
+                        self.from_station, self.to_station, self.travel_date
                     )
                     
                     if success:
-                        msg = f"🎊 台鐵搶票成功！\n車次：{target_train['train_no']}\n日期：{self.date}\n區間：{self.from_stn} -> {self.to_stn}\n請儘速至台鐵官網付款。"
+                        msg = f"🎊 台鐵搶票成功！\n車次：{target_train['train_no']}\n日期：{self.travel_date}\n區間：{self.from_station} -> {self.to_station}\n請儘速至台鐵官網付款。"
                         await self.notifier.send_message(msg)
                         self.is_running = False
                         break

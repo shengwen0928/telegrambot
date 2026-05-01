@@ -1,56 +1,54 @@
-(venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
-Traceback (most recent call last):
-  File "/home/ad565198ad56519867/telegrambot/venv/bin/uvicorn", line 8, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
-    return self.main(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1406, in main
-    rv = self.invoke(ctx)
-         ^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
-    return ctx.invoke(self.callback, **ctx.params)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 824, in invoke
-    return callback(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 441, in main
-    run(
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 617, in run
-    server.run()
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
-    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
-    return runner.run(main)
-           ^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/asyncio/runners.py", line 118, in run
-    return self._loop.run_until_complete(task)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
-    return future.result()
-           ^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
-    await self._serve(sockets)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
-    config.load()
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/config.py", line 449, in load
-    self.loaded_app = import_from_string(self.app)
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
-    module = importlib.import_module(module_str)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 940, in exec_module
-  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 91, in <module>
-    running_tasks: Dict[str, List[HohsinMonitor]] = {}
-                             ^^^^
-NameError: name 'List' is not defined. Did you mean: 'list'?
+    return await self.app(scope, receive, send)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
+    await super().__call__(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
+    await self.app(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
+    await route.handle(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
+    await self.app(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 120, in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 674, in app
+    raw_response = await run_endpoint_function(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 400, in callback
+    handler.handle(body_str, signature)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 242, in handle
+    self.__invoke_func(func, event, payload)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 254, in __invoke_func
+    func(event)
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 529, in handle_message
+    line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_task_list_carousel(tasks)]))
+                                                                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 375, in create_task_list_carousel
+    {"type": "text", "text": f"📍 {m.from_station} ➡️  {m.to_station}", "weight": "bold", "size": "sm"},
+                                  ^^^^^^^^^^^^^^
+AttributeError: 'TaiwanRailwayMonitor' object has no attribute 'from_station'
+2026-05-01 09:33:20,279 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/queryTrain "HTTP/1.1 302 Moved Temporarily"
+2026-05-01 09:33:20,752 - httpx - INFO - HTTP Request: GET https://tip.railway.gov
