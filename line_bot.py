@@ -411,20 +411,63 @@ async def callback(request: Request):
 # --- LINE 事件處理 ---
 
 def start_monitor_task(user_id, state, users):
-    """輔助函式：封裝啟動監控任務的邏輯，避免重複代碼"""
+    """輔助函式：將啟動資訊包裝成精緻卡片，並執行背景任務"""
     from_name = state["from_stn_name"]
     to_name = state["to_stn_name"]
-    time_parts = state["time_range"].split("~")
+    time_range = state["time_range"]
+    time_parts = time_range.split("~")
     
-    summary = (
-        "🚀 **搶票任務已啟動！**\n\n"
-        f"📍 {from_name} ➡️ {to_name}\n"
-        f"📅 {state['date']}\n"
-        f"⏰ {state['time_range']}\n"
-        f"🎫 {state['num_tickets']} 張 ({'手動' if state['seat_mode']=='manual' else '自動'})\n"
-        f"{'💺 指定：' + str(state['manual_seats']) if state['seat_mode']=='manual' else ''}"
-    )
+    # 建立精緻的「任務收執聯」內容
+    contents = [
+        {
+            "type": "box", "layout": "horizontal", "contents": [
+                {"type": "text", "text": from_name, "weight": "bold", "size": "md"},
+                {"type": "text", "text": "➡️", "size": "sm", "color": "#aaaaaa", "align": "center"},
+                {"type": "text", "text": to_name, "weight": "bold", "size": "md"}
+            ], "alignItems": "center"
+        },
+        {"type": "separator", "margin": "md"},
+        {
+            "type": "box", "layout": "vertical", "margin": "md", "spacing": "sm", "contents": [
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": "📅 日期", "size": "xs", "color": "#aaaaaa", "flex": 2},
+                    {"type": "text", "text": state['date'], "size": "xs", "color": "#666666", "flex": 5}
+                ]},
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": "⏰ 時段", "size": "xs", "color": "#aaaaaa", "flex": 2},
+                    {"type": "text", "text": time_range, "size": "xs", "color": "#666666", "flex": 5}
+                ]},
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": "🎫 張數", "size": "xs", "color": "#aaaaaa", "flex": 2},
+                    {"type": "text", "text": f"{state['num_tickets']} 張", "size": "xs", "color": "#666666", "flex": 5}
+                ]},
+                {"type": "box", "layout": "horizontal", "contents": [
+                    {"type": "text", "text": "🤖 模式", "size": "xs", "color": "#aaaaaa", "flex": 2},
+                    {"type": "text", "text": "手動指定" if state['seat_mode']=='manual' else "自動最優", "size": "xs", "color": THEME_COLOR, "flex": 5}
+                ]}
+            ]
+        }
+    ]
+
+    # 如果有手動座號，補上資訊
+    if state['seat_mode'] == 'manual' and state.get('manual_seats'):
+        contents[2]["contents"].append({
+            "type": "box", "layout": "horizontal", "contents": [
+                {"type": "text", "text": "💺 座號", "size": "xs", "color": "#aaaaaa", "flex": 2},
+                {"type": "text", "text": str(state['manual_seats']), "size": "xs", "color": "#666666", "flex": 5}
+            ]
+        })
+
+    # 封裝成 Flex Card
+    card_dict = create_base_flex_card("🚀 搶票任務已啟動", contents)
+    # 增加一個 footer 提示
+    card_dict["footer"] = {
+        "type": "box", "layout": "vertical", "contents": [
+            {"type": "text", "text": "💡 提示：輸入「查詢」可控管任務", "size": "xxs", "color": "#aaaaaa", "align": "center"}
+        ]
+    }
     
+    # 啟動實際監控
     monitor = HohsinMonitor(
         from_station=state["from_stn"],
         to_station=state["to_stn"],
@@ -438,20 +481,19 @@ def start_monitor_task(user_id, state, users):
     )
     monitor.num_tickets = state["num_tickets"]
     
-    # 紀錄任務
     if user_id not in running_tasks: running_tasks[user_id] = []
     running_tasks[user_id].append(monitor)
     
     async def run_and_cleanup():
-        try:
-            await monitor.run()
+        try: await monitor.run()
         finally:
             if user_id in running_tasks and monitor in running_tasks[user_id]:
                 running_tasks[user_id].remove(monitor)
     
     asyncio.create_task(run_and_cleanup())
     state["step"] = States.IDLE
-    return TextMessage(text=summary)
+    
+    return FlexMessage(alt_text="🚀 搶票任務啟動成功", contents=FlexContainer.from_dict(card_dict))
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
