@@ -381,10 +381,15 @@ def create_task_list_carousel(tasks):
         bubbles.append(bubble)
     return FlexMessage(alt_text="📡 您的任務清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
-def get_station_name(stn_id: str) -> str:
-    for s in STATIONS_CACHE:
-        if s["id"] == stn_id:
-            return s["operatingName"]
+def get_station_name(stn_id: str, bus_type: str = "hohsin") -> str:
+    """根據業者類型獲取車站名稱"""
+    if bus_type == "hohsin":
+        for s in STATIONS_CACHE:
+            if s["id"] == stn_id:
+                return s["operatingName"]
+    else:
+        # 台鐵
+        return TR_STATIONS.get(stn_id, stn_id)
     return stn_id
 
 # --- FastAPI 路由 ---
