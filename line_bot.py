@@ -121,13 +121,11 @@ class LineNotifier:
                 # 錯誤或其他提示則使用一般的紅/綠卡片
                 title = "⚠️ 系統通知" if "❌" in text or "⚠️" in text else "📢 狀態更新"
                 color = DANGER_COLOR if "❌" in text or "⚠️" in text else THEME_COLOR
-                contents = [{"type": "text", "text": text, "wrap": True, "size": "sm"}]
-                msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(create_base_flex_card(title, contents)))
-                # 如果只是單純狀態更新，顏色維持綠色
-                if color == THEME_COLOR:
-                    msg.contents.header.background_color = THEME_COLOR
-                else:
-                    msg.contents.header.background_color = DANGER_COLOR
+                
+                card_dict = create_base_flex_card(title, [{"type": "text", "text": text, "wrap": True, "size": "sm"}])
+                card_dict["header"]["backgroundColor"] = color
+                
+                msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(card_dict))
 
             req = PushMessageRequest(to=self.user_id, messages=[msg])
             line_bot_api.push_message(req)
@@ -209,17 +207,25 @@ def create_base_flex_card(title: str, contents: list, footer_buttons: list = Non
 # --- 輔助函式：建立 Flex Message ---
 
 def create_bus_card():
-    """客運選擇卡片"""
-    contents = [{"type": "text", "text": "👋 歡迎使用自動搶票系統！\n請選擇您要服務的客運公司：", "wrap": True, "size": "sm", "color": "#666666"}]
-    footer = [{
-        "type": "button",
-        "action": {"type": "message", "label": "🚌 和欣客運", "text": "客運:和欣"},
-        "style": "primary", "color": THEME_COLOR
-    }]
-    return FlexMessage(alt_text="請選擇客運", contents=FlexContainer.from_dict(create_base_flex_card("🎫 搶票中心", contents, footer)))
+    """客運/鐵路選擇卡片"""
+    contents = [{"type": "text", "text": "👋 歡迎使用自動搶票系統！\n請選擇您要服務的業者：", "wrap": True, "size": "sm", "color": "#666666"}]
+    footer = [
+        {
+            "type": "button",
+            "action": {"type": "message", "label": "🚌 和欣客運", "text": "客運:和欣"},
+            "style": "primary", "color": THEME_COLOR
+        },
+        {
+            "type": "button",
+            "action": {"type": "message", "label": "🚆 台灣鐵路", "text": "客運:台鐵"},
+            "style": "secondary", "margin": "sm"
+        }
+    ]
+    return FlexMessage(alt_text="請選擇業者", contents=FlexContainer.from_dict(create_base_flex_card("🎫 搶票中心", contents, footer)))
 
 def create_login_hint_card(bus_name: str, masked_phone: str = None):
     """帳密輸入/確認卡片"""
+    bus_label = "和欣手機" if "和欣" in bus_name else "身分證字號"
     if masked_phone:
         title = "👋 歡迎回來"
         contents = [{"type": "text", "text": f"偵測到您已儲存【{bus_name}】帳號：\n📱 {masked_phone}\n\n是否直接載入？", "wrap": True, "size": "sm"}]
@@ -229,7 +235,7 @@ def create_login_hint_card(bus_name: str, masked_phone: str = None):
         ]
     else:
         title = "🔒 安全驗證"
-        contents = [{"type": "text", "text": f"為確保【{bus_name}】訂票成功，請於下方對話框輸入您的「手機號碼」。", "wrap": True, "size": "sm", "weight": "bold"}]
+        contents = [{"type": "text", "text": f"為確保【{bus_name}】訂票成功，請於下方對話框輸入您的「{bus_label}」。", "wrap": True, "size": "sm", "weight": "bold"}]
         footer = None
     return FlexMessage(alt_text="帳密確認", contents=FlexContainer.from_dict(create_base_flex_card(title, contents, footer)))
 
@@ -266,80 +272,7 @@ def create_favorites_carousel(favorites):
     return FlexMessage(alt_text="⭐ 您的常用清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
 def create_stations_carousel(stations, step_prefix="上車"):
-    """分頁式的車站選擇卡片"""
-    bubbles = []
-    chunk_size = 5 # 縮小一點讓卡片更精簡
-    for i in range(0, len(stations), chunk_size):
-        chunk = stations[i:i + chunk_size]
-        btns = []
-        for s in chunk:
-            btns.append({"type": "button", "action": {"type": "message", "label": s["operatingName"], "text": f"{step_prefix}:{s['id']}"}, "style": "secondary", "margin": "xs", "height": "sm"})
-        
-        bubble = create_base_flex_card(f"📍 選擇{step_prefix}站", btns)
-        bubbles.append(bubble)
-        if len(bubbles) == 10: break
-
-    return FlexMessage(alt_text=f"請選擇{step_prefix}站", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
-
-def create_summary_card(state):
-    """最終啟動確認卡片"""
-    from_n, to_n = state["from_stn_name"], state["to_stn_name"]
-    contents = [
-        {"type": "box", "layout": "vertical", "contents": [
-            {"type": "text", "text": f"📍 路線：{from_n} ➡️ {to_n}", "weight": "bold", "size": "sm"},
-            {"type": "text", "text": f"📅 日期：{state['date']}", "size": "sm", "margin": "sm"},
-            {"type": "text", "text": f"⏰ 時段：{state['time_range']}", "size": "sm"},
-            {"type": "text", "text": f"🎫 張數：{state['num_tickets']} 張", "size": "sm"},
-            {"type": "text", "text": f"🤖 模式：{'手動指定' if state['seat_mode']=='manual' else '自動最優'}", "size": "sm", "color": THEME_COLOR}
-        ]}
-    ]
-    return create_base_flex_card("🚀 搶票任務已啟動", contents)
-
-def create_task_list_carousel(tasks):
-    """運行中任務的精緻選單"""
-    bubbles = []
-    for i, m in enumerate(tasks):
-        bubble = create_base_flex_card("📡 監控中", [
-            {"type": "text", "text": f"📅 {m.travel_date}", "weight": "bold"},
-            {"type": "text", "text": f"📍 {m.from_station} ➡️ {m.to_station}", "size": "sm"},
-            {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "sm"}
-        ], [
-            {"type": "button", "action": {"type": "message", "label": "🛑 停止任務", "text": f"取消任務:{i}"}, "style": "primary", "color": DANGER_COLOR, "height": "sm"}
-        ])
-        bubbles.append(bubble)
-    return FlexMessage(alt_text="目前任務清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
-
-# --- 其他 Quick Reply 保持現狀，因為它們是輸入輔助 ---
-def create_credential_choice_quick_reply():
-    """建立是否使用儲存帳密的 Quick Reply"""
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="✅ 使用儲存帳密", text="帳密:使用儲存")),
-        QuickReplyItem(action=MessageAction(label="🔄 輸入新帳密", text="帳密:輸入全新"))
-    ])
-
-def create_bus_quick_reply():
-    """建立客運選擇的 Quick Reply"""
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="🚌 和欣客運", text="客運:和欣"))
-    ])
-
-def create_seat_mode_quick_reply():
-    """建立選位模式 Quick Reply"""
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="🤖 自動選位", text="選位:自動")),
-        QuickReplyItem(action=MessageAction(label="⌨️ 手動輸入", text="選位:手動"))
-    ])
-
-def create_save_route_quick_reply():
-    """建立是否儲存常用路線的 Quick Reply"""
-    return QuickReply(items=[
-        QuickReplyItem(action=MessageAction(label="💾 儲存為常用", text="存路線:是")),
-        QuickReplyItem(action=MessageAction(label="跳過", text="存路線:否"))
-    ])
-
-def create_stations_carousel(stations, step_prefix="上車"):
-    """建立車站的輪播選單 (Carousel)"""
-    # 每個 Bubble (卡片) 最多只能放一定數量的按鈕，我們每張卡片放 3 個按鈕
+    """建立車站的輪播選單 (Carousel) - 整合精簡版"""
     bubbles = []
     chunk_size = 3
     for i in range(0, len(stations), chunk_size):
@@ -348,43 +281,15 @@ def create_stations_carousel(stations, step_prefix="上車"):
         for s in chunk:
             buttons.append({
                 "type": "button",
-                "action": {
-                    "type": "message",
-                    "label": s["operatingName"],
-                    "text": f"{step_prefix}:{s['id']}" # 訊息內容如 "上車:G03"
-                },
-                "style": "secondary",
-                "margin": "sm"
+                "action": {"type": "message", "label": s["operatingName"], "text": f"{step_prefix}:{s['id']}"},
+                "style": "secondary", "margin": "sm", "height": "sm"
             })
         
-        bubble = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": f"選擇{step_prefix}站",
-                        "weight": "bold",
-                        "size": "xl"
-                    }
-                ] + buttons
-            }
-        }
+        bubble = create_base_flex_card(f"📍 選擇{step_prefix}站", buttons)
         bubbles.append(bubble)
-        
-        # LINE Carousel 最多支援 12 個 bubble (即 36 個站)
-        if len(bubbles) == 12:
-            break
+        if len(bubbles) == 12: break
 
-    return FlexMessage(
-        alt_text=f"請選擇{step_prefix}站",
-        contents=FlexContainer.from_dict({
-            "type": "carousel",
-            "contents": bubbles
-        })
-    )
+    return FlexMessage(alt_text=f"請選擇{step_prefix}站", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
 def create_date_picker_quick_reply():
     """建立日期選擇器的 Quick Reply"""
@@ -471,7 +376,6 @@ def start_monitor_task(user_id, state, users):
     time_range = state["time_range"]
     time_parts = time_range.split("~")
     
-    # 建立精緻的「任務收執聯」內容
     contents = [
         {
             "type": "box", "layout": "horizontal", "contents": [
@@ -503,7 +407,6 @@ def start_monitor_task(user_id, state, users):
         }
     ]
 
-    # 如果有手動座號，補上資訊
     if state['seat_mode'] == 'manual' and state.get('manual_seats'):
         contents[2]["contents"].append({
             "type": "box", "layout": "horizontal", "contents": [
@@ -512,16 +415,14 @@ def start_monitor_task(user_id, state, users):
             ]
         })
 
-    # 封裝成 Flex Card
     card_dict = create_base_flex_card("🚀 搶票任務已啟動", contents)
-    # 增加一個 footer 提示
     card_dict["footer"] = {
         "type": "box", "layout": "vertical", "contents": [
             {"type": "text", "text": "💡 提示：輸入「查詢」可控管任務", "size": "xxs", "color": "#aaaaaa", "align": "center"}
         ]
     }
     
-    # 啟動實際監控
+    # 啟動監控
     monitor = HohsinMonitor(
         from_station=state["from_stn"],
         to_station=state["to_stn"],
@@ -546,8 +447,7 @@ def start_monitor_task(user_id, state, users):
     
     asyncio.create_task(run_and_cleanup())
     state["step"] = States.IDLE
-    
-    return FlexMessage(alt_text="🚀 搶票任務啟動成功", contents=FlexContainer.from_dict(card_dict))
+    return FlexMessage(alt_text="🚀 任務啟動成功", contents=FlexContainer.from_dict(card_dict))
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
@@ -756,8 +656,12 @@ def handle_message(event):
             else:
                 state["step"] = States.WAITING_FOR_SAVE_ROUTE
                 contents = [{"type": "text", "text": f"✅ 已指定座位：{seats}\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
-                card = FlexMessage(alt_text="存為常用", contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)))
-                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card, TextMessage(text="是否儲存？", quick_reply=create_save_route_quick_reply())]))
+                card = FlexMessage(
+                    alt_text="存為常用", 
+                    contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)),
+                    quick_reply=create_save_route_quick_reply()
+                )
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         except:
             contents = [{"type": "text", "text": "❌ 格式錯誤！\n請重新輸入數字（例如: 5 或 1,2）：", "color": DANGER_COLOR, "size": "sm"}]
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="格式錯誤", contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 輸入錯誤", contents)))]))
