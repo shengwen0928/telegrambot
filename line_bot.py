@@ -302,6 +302,49 @@ async def callback(request: Request):
 
 # --- LINE 事件處理 ---
 
+def start_monitor_task(user_id, state, users):
+    """輔助函式：封裝啟動監控任務的邏輯，避免重複代碼"""
+    from_name = state["from_stn_name"]
+    to_name = state["to_stn_name"]
+    time_parts = state["time_range"].split("~")
+    
+    summary = (
+        "🚀 **搶票任務已啟動！**\n\n"
+        f"📍 {from_name} ➡️ {to_name}\n"
+        f"📅 {state['date']}\n"
+        f"⏰ {state['time_range']}\n"
+        f"🎫 {state['num_tickets']} 張 ({'手動' if state['seat_mode']=='manual' else '自動'})\n"
+        f"{'💺 指定：' + str(state['manual_seats']) if state['seat_mode']=='manual' else ''}"
+    )
+    
+    monitor = HohsinMonitor(
+        from_station=state["from_stn"],
+        to_station=state["to_stn"],
+        travel_date=state["date"],
+        start_time=time_parts[0],
+        end_time=time_parts[1],
+        notifier=LineNotifier(user_id),
+        user_phone=state["phone"],
+        user_password=state["password"],
+        manual_seats=state.get("manual_seats")
+    )
+    monitor.num_tickets = state["num_tickets"]
+    
+    # 紀錄任務
+    if user_id not in running_tasks: running_tasks[user_id] = []
+    running_tasks[user_id].append(monitor)
+    
+    async def run_and_cleanup():
+        try:
+            await monitor.run()
+        finally:
+            if user_id in running_tasks and monitor in running_tasks[user_id]:
+                running_tasks[user_id].remove(monitor)
+    
+    asyncio.create_task(run_and_cleanup())
+    state["step"] = States.IDLE
+    return TextMessage(text=summary)
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
@@ -479,6 +522,7 @@ def handle_message(event):
         state["to_stn"] = fav["to"]
         state["from_stn_name"] = fav["name"].split("-")[0]
         state["to_stn_name"] = fav["name"].split("-")[1]
+        state["is_favorite_route"] = True # 標記為已存路線
         
         state["step"] = States.WAITING_FOR_DATE
         reply = TextMessage(text=f"⭐ 已選常用路線：{fav['name']}\n\n請選擇您要哪一天的車票：", quick_reply=create_date_picker_quick_reply())
@@ -490,6 +534,7 @@ def handle_message(event):
         stn_id = text.split(":")[1]
         state["from_stn"] = stn_id
         state["from_stn_name"] = get_station_name(stn_id)
+        state["is_favorite_route"] = False # 新搜尋，需要存為常用
         state["step"] = States.WAITING_FOR_TO
         reply = create_stations_carousel(STATIONS_CACHE, "下車")
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
@@ -526,12 +571,20 @@ def handle_message(event):
         if text == "選位:自動":
             state["seat_mode"] = "auto"
             state["manual_seats"] = None
-            state["step"] = States.WAITING_FOR_SAVE_ROUTE
-            reply = TextMessage(text="🤖 已選擇自動選位。\n最後，是否將此路線存為常用？", quick_reply=create_save_route_quick_reply())
         else:
             state["step"] = States.WAITING_FOR_MANUAL_SEATS
             reply = TextMessage(text="⌨️ 請輸入您指定的座號 (多個請用逗號隔開，例如: 5 或 1,2)：")
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            return
+
+        # 如果選自動選位，檢查是否直接啟動
+        if state.get("is_favorite_route"):
+            reply = start_monitor_task(user_id, state, users)
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        else:
+            state["step"] = States.WAITING_FOR_SAVE_ROUTE
+            reply = TextMessage(text="🤖 已選擇自動選位。\n最後，是否將此路線存為常用？", quick_reply=create_save_route_quick_reply())
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
     # 9. 輸入手動座號
@@ -540,11 +593,17 @@ def handle_message(event):
             seats = [int(s.strip()) for s in text.replace("，", ",").split(",")]
             state["manual_seats"] = seats
             state["seat_mode"] = "manual"
-            state["step"] = States.WAITING_FOR_SAVE_ROUTE
-            reply = TextMessage(text=f"✅ 已指定座位：{seats}\n\n最後，是否將此路線存為常用？", quick_reply=create_save_route_quick_reply())
+            
+            if state.get("is_favorite_route"):
+                reply = start_monitor_task(user_id, state, users)
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            else:
+                state["step"] = States.WAITING_FOR_SAVE_ROUTE
+                reply = TextMessage(text=f"✅ 已指定座位：{seats}\n\n最後，是否將此路線存為常用？", quick_reply=create_save_route_quick_reply())
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         except:
             reply = TextMessage(text="❌ 格式錯誤，請輸入數字 (例如: 5 或 1,2)：")
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
     # 10. 儲存常用路線並啟動監控
@@ -553,57 +612,15 @@ def handle_message(event):
         to_name = state["to_stn_name"]
         
         if text == "存路線:是":
-            if "favorites" not in users.get(user_id, {}): 
-                if user_id not in users: users[user_id] = {}
-                users[user_id]["favorites"] = []
-            # 檢查是否已存在
+            if user_id not in users: users[user_id] = {}
+            if "favorites" not in users[user_id]: users[user_id]["favorites"] = []
             exists = any(f["from"] == state["from_stn"] and f["to"] == state["to_stn"] for f in users[user_id]["favorites"])
             if not exists:
-                users[user_id]["favorites"].append({
-                    "from": state["from_stn"],
-                    "to": state["to_stn"],
-                    "name": f"{from_name}-{to_name}"
-                })
+                users[user_id]["favorites"].append({"from": state["from_stn"], "to": state["to_stn"], "name": f"{from_name}-{to_name}"})
                 save_users(users)
 
-        # 啟動監控
-        time_parts = state["time_range"].split("~")
-        summary = (
-            "🚀 **搶票任務已啟動！**\n\n"
-            f"📍 {from_name} ➡️ {to_name}\n"
-            f"📅 {state['date']}\n"
-            f"⏰ {state['time_range']}\n"
-            f"🎫 {state['num_tickets']} 張 ({'手動' if state['seat_mode']=='manual' else '自動'})\n"
-            f"{'💺 指定：' + str(state['manual_seats']) if state['seat_mode']=='manual' else ''}"
-        )
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=summary)]))
-        
-        monitor = HohsinMonitor(
-            from_station=state["from_stn"],
-            to_station=state["to_stn"],
-            travel_date=state["date"],
-            start_time=time_parts[0],
-            end_time=time_parts[1],
-            notifier=LineNotifier(user_id),
-            user_phone=state["phone"],
-            user_password=state["password"],
-            manual_seats=state.get("manual_seats")
-        )
-        monitor.num_tickets = state["num_tickets"]
-        
-        # 紀錄任務
-        if user_id not in running_tasks: running_tasks[user_id] = []
-        running_tasks[user_id].append(monitor)
-        
-        async def run_and_cleanup():
-            try:
-                await monitor.run()
-            finally:
-                if user_id in running_tasks and monitor in running_tasks[user_id]:
-                    running_tasks[user_id].remove(monitor)
-        
-        asyncio.create_task(run_and_cleanup())
-        state["step"] = States.IDLE
+        reply = start_monitor_task(user_id, state, users)
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
 
