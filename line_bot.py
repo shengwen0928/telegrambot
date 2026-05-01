@@ -657,14 +657,21 @@ def handle_message(event):
     # 3. 選擇上車站
     if state["step"] == States.WAITING_FOR_FROM and text.startswith("上車:"):
         stn_id = text.split(":")[1]
-        state.update({"from_stn": stn_id, "from_stn_name": get_station_name(stn_id), "is_favorite_route": False, "step": States.WAITING_FOR_TO})
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "下車")]))
+        bus_type = state.get("bus", "hohsin")
+        state.update({"from_stn": stn_id, "from_stn_name": get_station_name(stn_id, bus_type), "is_favorite_route": False, "step": States.WAITING_FOR_TO})
+        
+        if bus_type == "hohsin":
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "下車")]))
+        else:
+            tr_list = [{"id": k, "operatingName": v} for k, v in TR_STATIONS.items()]
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(tr_list, "下車")]))
         return
 
     # 4. 選擇下車站
     if state["step"] == States.WAITING_FOR_TO and text.startswith("下車:"):
         stn_id = text.split(":")[1]
-        state.update({"to_stn": stn_id, "to_stn_name": get_station_name(stn_id), "step": States.WAITING_FOR_DATE})
+        bus_type = state.get("bus", "hohsin")
+        state.update({"to_stn": stn_id, "to_stn_name": get_station_name(stn_id, bus_type), "step": States.WAITING_FOR_DATE})
         
         contents = [{"type": "text", "text": f"📍 路線：{state['from_stn_name']} ➡️ {state['to_stn_name']}\n\n請點擊下方按鈕選擇乘車日期。", "wrap": True, "size": "sm"}]
         card = FlexMessage(
