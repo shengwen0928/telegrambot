@@ -32,6 +32,9 @@ from linebot.v3.webhooks import (
 
 from src.hohsin_api import HohsinAPI
 from src.monitor import HohsinMonitor
+from src.tr_api import TaiwanRailwayAPI
+from src.tr_stations import TR_STATIONS
+from src.tr_monitor import TaiwanRailwayMonitor
 
 # 設定日誌
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -172,6 +175,10 @@ class States:
     WAITING_FOR_SEAT_MODE = "waiting_for_seat_mode"
     WAITING_FOR_MANUAL_SEATS = "waiting_for_manual_seats"
     WAITING_FOR_SAVE_ROUTE = "waiting_for_save_route"
+    # 台鐵專用狀態
+    WAITING_FOR_TRA_ID = "waiting_for_tra_id"
+    WAITING_FOR_TRA_PASSWORD = "waiting_for_tra_password"
+    WAITING_FOR_TRA_SAVE_CHOICE = "waiting_for_tra_save_choice"
 
 # --- 統一樣式規範 ---
 THEME_COLOR = "#00b900" # 和欣綠
@@ -345,6 +352,35 @@ def create_ticket_count_quick_reply():
         items.append(QuickReplyItem(action=MessageAction(label=f"{i} 張", text=f"張數:{i}")))
     return QuickReply(items=items)
 
+def create_seat_mode_quick_reply():
+    """建立選位模式的 Quick Reply"""
+    return QuickReply(items=[
+        QuickReplyItem(action=MessageAction(label="🤖 自動選位", text="選位:自動")),
+        QuickReplyItem(action=MessageAction(label="⌨️ 手動指定", text="選位:手動"))
+    ])
+
+def create_save_route_quick_reply():
+    """建立儲存路線選擇的 Quick Reply"""
+    return QuickReply(items=[
+        QuickReplyItem(action=MessageAction(label="💾 是，存為常用", text="存路線:是")),
+        QuickReplyItem(action=MessageAction(label="❌ 否，不需要", text="存路線:否"))
+    ])
+
+def create_task_list_carousel(tasks):
+    """建立任務清單的輪播選單"""
+    bubbles = []
+    for i, m in enumerate(tasks):
+        bus_name = "和欣" if isinstance(m, HohsinMonitor) else "台鐵"
+        bubble = create_base_flex_card(f"📡 任務 #{i+1} ({bus_name})", [
+            {"type": "text", "text": f"📍 {m.from_station} ➡️ {m.to_station}", "weight": "bold", "size": "sm"},
+            {"type": "text", "text": f"📅 {m.travel_date}", "size": "xs"},
+            {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "xs"}
+        ], [
+            {"type": "button", "action": {"type": "message", "label": "🛑 停止任務", "text": f"取消任務:{i}"}, "style": "secondary", "color": DANGER_COLOR, "height": "sm"}
+        ])
+        bubbles.append(bubble)
+    return FlexMessage(alt_text="📡 您的任務清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
+
 def get_station_name(stn_id: str) -> str:
     for s in STATIONS_CACHE:
         if s["id"] == stn_id:
@@ -371,6 +407,9 @@ async def callback(request: Request):
 
 def start_monitor_task(user_id, state, users):
     """輔助函式：將啟動資訊包裝成精緻卡片，並執行背景任務"""
+    bus_type = state.get("bus", "hohsin")
+    bus_name = "和欣客運" if bus_type == "hohsin" else "台灣鐵路"
+    
     from_name = state["from_stn_name"]
     to_name = state["to_stn_name"]
     time_range = state["time_range"]
@@ -415,7 +454,7 @@ def start_monitor_task(user_id, state, users):
             ]
         })
 
-    card_dict = create_base_flex_card("🚀 搶票任務已啟動", contents)
+    card_dict = create_base_flex_card(f"🚀 {bus_name}任務已啟動", contents)
     card_dict["footer"] = {
         "type": "box", "layout": "vertical", "contents": [
             {"type": "text", "text": "💡 提示：輸入「查詢」可控管任務", "size": "xxs", "color": "#aaaaaa", "align": "center"}
@@ -423,17 +462,30 @@ def start_monitor_task(user_id, state, users):
     }
     
     # 啟動監控
-    monitor = HohsinMonitor(
-        from_station=state["from_stn"],
-        to_station=state["to_stn"],
-        travel_date=state["date"],
-        start_time=time_parts[0],
-        end_time=time_parts[1],
-        notifier=LineNotifier(user_id),
-        user_phone=state["phone"],
-        user_password=state["password"],
-        manual_seats=state.get("manual_seats")
-    )
+    if bus_type == "hohsin":
+        monitor = HohsinMonitor(
+            from_station=state["from_stn"],
+            to_station=state["to_stn"],
+            travel_date=state["date"],
+            start_time=time_parts[0],
+            end_time=time_parts[1],
+            notifier=LineNotifier(user_id),
+            user_phone=state["phone"],
+            user_password=state["password"],
+            manual_seats=state.get("manual_seats")
+        )
+    else:
+        monitor = TaiwanRailwayMonitor(
+            from_station=state["from_stn"],
+            to_station=state["to_stn"],
+            travel_date=state["date"],
+            start_time=time_parts[0],
+            end_time=time_parts[1],
+            notifier=LineNotifier(user_id),
+            user_id_no=state["phone"],
+            user_password=state["password"]
+        )
+    
     monitor.num_tickets = state["num_tickets"]
     
     if user_id not in running_tasks: running_tasks[user_id] = []
@@ -487,35 +539,40 @@ def handle_message(event):
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
             return
 
-    # 2. 選擇客運
-    if state["step"] == States.WAITING_FOR_BUS and text == "客運:和欣":
-        state["bus"] = "hohsin"
-        if user_id in users and "hohsin" in users[user_id]:
+    # 2. 選擇業者
+    if state["step"] == States.WAITING_FOR_BUS and text.startswith("客運:"):
+        bus_type = text.split(":")[1]
+        state["bus"] = bus_type
+        
+        bus_name = "和欣客運" if bus_type == "hohsin" else "台灣鐵路"
+        if user_id in users and bus_type in users[user_id]:
             state["step"] = States.WAITING_FOR_CREDENTIAL_CHOICE
-            masked_phone = users[user_id]["hohsin"].get("phone", "")
-            if len(masked_phone) >= 4:
-                masked_phone = masked_phone[:-4] + "****"
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card("和欣客運", masked_phone)]))
+            stored_id = users[user_id][bus_type].get("phone") or users[user_id][bus_type].get("username")
+            masked_id = stored_id[:-4] + "****" if stored_id and len(stored_id) >= 4 else "****"
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card(bus_name, masked_id)]))
         else:
-            state["step"] = States.WAITING_FOR_PHONE
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card("和欣客運")]))
+            state["step"] = States.WAITING_FOR_PHONE if bus_type == "hohsin" else States.WAITING_FOR_TRA_ID
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card(bus_name)]))
         return
 
     # 2.1 選擇是否使用儲存帳密
     if state["step"] == States.WAITING_FOR_CREDENTIAL_CHOICE and text.startswith("帳密:"):
+        bus_type = state["bus"]
         if text == "帳密:使用儲存":
-            state["phone"] = users[user_id]["hohsin"]["phone"]
-            state["password"] = users[user_id]["hohsin"]["password"]
+            creds = users[user_id][bus_type]
+            state["phone"] = creds.get("phone") or creds.get("username")
+            state["password"] = creds["password"]
             state["step"] = States.WAITING_FOR_ROUTE_CHOICE
             favs = users.get(user_id, {}).get("favorites", [])
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(bool(favs))]))
         else:
-            state["step"] = States.WAITING_FOR_PHONE
-            contents = [{"type": "text", "text": "請輸入新的【和欣客運手機號碼】：", "size": "sm"}]
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入手機", contents=FlexContainer.from_dict(create_base_flex_card("🔒 帳號設定", contents)))]))
+            state["step"] = States.WAITING_FOR_PHONE if bus_type == "hohsin" else States.WAITING_FOR_TRA_ID
+            label = "和欣手機" if bus_type == "hohsin" else "身分證字號"
+            contents = [{"type": "text", "text": f"請輸入新的【{label}】：", "size": "sm"}]
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="重新輸入", contents=FlexContainer.from_dict(create_base_flex_card("🔒 帳號重設", contents)))]))
         return
 
-    # 2.2 輸入手機
+    # 2.2 輸入手機 (和欣)
     if state["step"] == States.WAITING_FOR_PHONE:
         state["phone"] = text
         state["step"] = States.WAITING_FOR_PASSWORD
@@ -523,11 +580,19 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 密碼設定", contents)))]))
         return
 
-    # 2.3 輸入密碼
-    if state["step"] == States.WAITING_FOR_PASSWORD:
+    # 2.2.1 輸入身分證 (台鐵)
+    if state["step"] == States.WAITING_FOR_TRA_ID:
+        state["phone"] = text.upper() # 台鐵身分證轉大寫
+        state["step"] = States.WAITING_FOR_TRA_PASSWORD
+        contents = [{"type": "text", "text": f"🆔 身分證：{state['phone']}\n\n請輸入【台鐵會員密碼】：", "wrap": True, "size": "sm"}]
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 鐵路密碼", contents)))]))
+        return
+
+    # 2.3 輸入密碼 (通用處理)
+    if state["step"] in [States.WAITING_FOR_PASSWORD, States.WAITING_FOR_TRA_PASSWORD]:
         state["password"] = text
-        state["step"] = States.WAITING_FOR_SAVE_CHOICE
-        contents = [{"type": "text", "text": "密碼已接收。\n請問是否要將此帳密儲存起來，方便下次自動登入？", "wrap": True, "size": "sm"}]
+        state["step"] = States.WAITING_FOR_SAVE_CHOICE if state["bus"] == "hohsin" else States.WAITING_FOR_TRA_SAVE_CHOICE
+        contents = [{"type": "text", "text": "密碼已接收。\n請問是否要儲存此帳密，方便下次自動登入？", "wrap": True, "size": "sm"}]
         footer = [
             {"type": "button", "action": {"type": "message", "label": "💾 是，記住帳密", "text": "記憶:是"}, "style": "primary", "color": THEME_COLOR},
             {"type": "button", "action": {"type": "message", "label": "❌ 否，不要記住", "text": "記憶:否"}, "style": "link", "color": "#666666"}
@@ -536,10 +601,12 @@ def handle_message(event):
         return
 
     # 2.4 選擇是否儲存
-    if state["step"] == States.WAITING_FOR_SAVE_CHOICE and text.startswith("記憶:"):
+    if state["step"] in [States.WAITING_FOR_SAVE_CHOICE, States.WAITING_FOR_TRA_SAVE_CHOICE] and text.startswith("記憶:"):
+        bus_type = state["bus"]
         if text == "記憶:是":
             if user_id not in users: users[user_id] = {}
-            users[user_id]["hohsin"] = {"phone": state["phone"], "password": state["password"]}
+            # 統一儲存結構
+            users[user_id][bus_type] = {"phone" if bus_type=="hohsin" else "username": state["phone"], "password": state["password"]}
             save_users(users)
         state["step"] = States.WAITING_FOR_ROUTE_CHOICE
         favs = users.get(user_id, {}).get("favorites", [])
@@ -557,8 +624,14 @@ def handle_message(event):
             return
         elif text == "路線:全新":
             state["step"] = States.WAITING_FOR_FROM
-            asyncio.create_task(init_stations())
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "上車")]))
+            if state["bus"] == "hohsin":
+                asyncio.create_task(init_stations())
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "上車")]))
+            else:
+                # 台鐵車站選擇：將字典轉為 list
+                tr_list = [{"id": k, "operatingName": v} for k, v in TR_STATIONS.items()]
+                # 只取前面比較熱門的幾張卡片
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(tr_list, "上車")]))
             return
 
     # 2.6 選擇常用路線
