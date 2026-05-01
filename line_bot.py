@@ -261,12 +261,12 @@ def create_date_picker_quick_reply():
     ])
 
 def create_times_quick_reply(selected_date: str):
-    """建立時段選擇的 Quick Reply (過濾當天已過期及距離發車不到 1 小時的時段)"""
+    """建立時段選擇的 Quick Reply (以結束時間判定，過濾當天已完全截止訂票的時段)"""
     all_times = [
-        ("00:00~03:00", "00:00"), ("03:00~06:00", "03:00"), 
-        ("06:00~09:00", "06:00"), ("09:00~12:00", "09:00"),
-        ("12:00~15:00", "12:00"), ("15:00~18:00", "15:00"), 
-        ("18:00~21:00", "18:00"), ("21:00~23:59", "21:00")
+        ("00:00~03:00", "03:00"), ("03:00~06:00", "06:00"), 
+        ("06:00~09:00", "09:00"), ("09:00~12:00", "12:00"),
+        ("12:00~15:00", "15:00"), ("15:00~18:00", "18:00"), 
+        ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
     ]
     
     now = datetime.now()
@@ -277,10 +277,10 @@ def create_times_quick_reply(selected_date: str):
     deadline_str = deadline_time.strftime("%H:%M")
 
     items = []
-    for display, start_time in all_times:
-        # 如果是今天，且「現在+1小時」已經超過時段的「起始時間」
-        # 代表該時段內的班次幾乎都已過期或無法線上訂票
-        if is_today and deadline_str > start_time:
+    for display, end_time in all_times:
+        # 修正：以結束時間判定。如果「現在+1小時」已經超過「整個時段的結束時間」，
+        # 才代表這個區間內已經沒有任何班次可以線上訂購了。
+        if is_today and deadline_str > end_time:
             continue
         items.append(QuickReplyItem(action=MessageAction(label=display, text=f"時段:{display}")))
     
