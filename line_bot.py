@@ -87,6 +87,9 @@ class LineNotifier:
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }
 user_states: Dict[str, Dict[str, Any]] = {}
 
+# 追蹤運行中的任務: { "user_id": [monitor_obj1, monitor_obj2, ...] }
+running_tasks: Dict[str, List[HohsinMonitor]] = {}
+
 # 全域的和欣 API 實例 (用來抓車站)
 global_api = HohsinAPI()
 STATIONS_CACHE = []
@@ -321,6 +324,48 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
         return
 
+    # 1.5 查詢/取消任務
+    if text in ["查詢", "查詢任務", "取消"]:
+        tasks = running_tasks.get(user_id, [])
+        if not tasks:
+            reply = TextMessage(text="您目前沒有正在執行的搶票任務。")
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            return
+        
+        bubbles = []
+        for i, m in enumerate(tasks):
+            bubbles.append({
+                "type": "bubble",
+                "size": "micro",
+                "body": {
+                    "type": "box",
+                    "layout": "vertical",
+                    "contents": [
+                        {"type": "text", "text": f"📅 {m.travel_date}", "weight": "bold", "size": "sm"},
+                        {"type": "text", "text": f"📍 {m.from_station} ➡️ {m.to_station}", "size": "xs"},
+                        {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "xs"},
+                        {
+                            "type": "button",
+                            "action": {"type": "message", "label": "❌ 取消此任務", "text": f"取消任務:{i}"},
+                            "style": "secondary", "margin": "md", "color": "#ff4d4f", "height": "sm"
+                        }
+                    ]
+                }
+            })
+        reply = FlexMessage(alt_text="目前任務清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+        return
+
+    # 1.6 執行取消
+    if text.startswith("取消任務:"):
+        idx = int(text.split(":")[1])
+        if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
+            m = running_tasks[user_id].pop(idx)
+            m.stop() # 停止監控循環
+            reply = TextMessage(text=f"🛑 已停止任務：{m.travel_date} {m.from_station}➡️{m.to_station}")
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+            return
+
     # 2. 選擇客運
     if state["step"] == States.WAITING_FOR_BUS and text == "客運:和欣":
         state["bus"] = "hohsin"
@@ -545,7 +590,19 @@ def handle_message(event):
             manual_seats=state.get("manual_seats")
         )
         monitor.num_tickets = state["num_tickets"]
-        asyncio.create_task(monitor.run())
+        
+        # 紀錄任務
+        if user_id not in running_tasks: running_tasks[user_id] = []
+        running_tasks[user_id].append(monitor)
+        
+        async def run_and_cleanup():
+            try:
+                await monitor.run()
+            finally:
+                if user_id in running_tasks and monitor in running_tasks[user_id]:
+                    running_tasks[user_id].remove(monitor)
+        
+        asyncio.create_task(run_and_cleanup())
         state["step"] = States.IDLE
         return
 

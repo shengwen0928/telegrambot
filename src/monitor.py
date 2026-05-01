@@ -74,6 +74,11 @@ class HohsinMonitor:
         
         return False
 
+    def stop(self):
+        """停止監控循環。"""
+        self.is_running = False
+        logger.info(f"使用者手動停止監控: {self.from_station} -> {self.to_station}")
+
     async def _auto_book(self, schedule: Dict[str, Any]) -> bool:
         """執行自動選位與訂票，支援多張票與自定義座位偏好。"""
         try:
