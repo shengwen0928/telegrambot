@@ -262,7 +262,7 @@ def create_date_picker_quick_reply():
     ])
 
 def create_times_quick_reply(selected_date: str):
-    """建立時段選擇的 Quick Reply (以結束時間判定，過濾當天已完全截止訂票的時段)"""
+    """建立時段選擇的 Quick Reply (強制台灣時區判定)"""
     all_times = [
         ("00:00~03:00", "03:00"), ("03:00~06:00", "06:00"), 
         ("06:00~09:00", "09:00"), ("09:00~12:00", "12:00"),
@@ -270,17 +270,19 @@ def create_times_quick_reply(selected_date: str):
         ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
     ]
     
-    now = datetime.now()
-    is_today = selected_date == now.strftime("%Y-%m-%d")
+    # 強制獲取台灣時間
+    tw_tz = pytz.timezone('Asia/Taipei')
+    now_tw = datetime.now(tw_tz)
     
-    # 計算「現在時間 + 1 小時」作為訂票截止基準
-    deadline_time = now + timedelta(hours=1)
+    is_today = selected_date == now_tw.strftime("%Y-%m-%d")
+    
+    # 計算「台灣現在時間 + 1 小時」作為訂票截止基準
+    deadline_time = now_tw + timedelta(hours=1)
     deadline_str = deadline_time.strftime("%H:%M")
 
     items = []
     for display, end_time in all_times:
-        # 修正：以結束時間判定。如果「現在+1小時」已經超過「整個時段的結束時間」，
-        # 才代表這個區間內已經沒有任何班次可以線上訂購了。
+        # 如果選的是今天，且「台灣現在+1小時」已經超過時段「結束時間」，則隱藏
         if is_today and deadline_str > end_time:
             continue
         items.append(QuickReplyItem(action=MessageAction(label=display, text=f"時段:{display}")))
