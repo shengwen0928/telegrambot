@@ -568,7 +568,7 @@ def handle_message(event):
             state["phone"] = creds.get("phone") or creds.get("username")
             state["password"] = creds["password"]
             state["step"] = States.WAITING_FOR_ROUTE_CHOICE
-            favs = users.get(user_id, {}).get("favorites", [])
+            favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(bool(favs))]))
         else:
             state["step"] = States.WAITING_FOR_PHONE if bus_type == "hohsin" else States.WAITING_FOR_TRA_ID
@@ -614,14 +614,15 @@ def handle_message(event):
             users[user_id][bus_type] = {"phone" if bus_type=="hohsin" else "username": state["phone"], "password": state["password"]}
             save_users(users)
         state["step"] = States.WAITING_FOR_ROUTE_CHOICE
-        favs = users.get(user_id, {}).get("favorites", [])
+        favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(bool(favs))]))
         return
 
     # 2.5 選擇路線方式
     if state["step"] == States.WAITING_FOR_ROUTE_CHOICE:
+        bus_type = state.get("bus", "hohsin")
         if text == "路線:常用":
-            favs = users.get(user_id, {}).get("favorites", [])
+            favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
             if not favs:
                 line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(False)]))
             else:
@@ -629,7 +630,7 @@ def handle_message(event):
             return
         elif text == "路線:全新":
             state["step"] = States.WAITING_FOR_FROM
-            if state["bus"] == "hohsin":
+            if bus_type == "hohsin":
                 asyncio.create_task(init_stations())
                 line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "上車")]))
             else:
@@ -641,8 +642,9 @@ def handle_message(event):
 
     # 2.6 選擇常用路線
     if state["step"] == States.WAITING_FOR_ROUTE_CHOICE and text.startswith("常用路線:"):
+        bus_type = state.get("bus", "hohsin")
         idx = int(text.split(":")[1])
-        fav = users[user_id]["favorites"][idx]
+        fav = users[user_id][f"favorites_{bus_type}"][idx]
         state.update({"from_stn": fav["from"], "to_stn": fav["to"], "from_stn_name": fav["name"].split("-")[0], "to_stn_name": fav["name"].split("-")[1], "is_favorite_route": True, "step": States.WAITING_FOR_DATE})
         
         contents = [{"type": "text", "text": f"⭐ 已選常用路線：\n{fav['name']}\n\n請點擊下方按鈕選擇乘車日期。", "wrap": True, "size": "sm"}]
@@ -652,6 +654,27 @@ def handle_message(event):
             quick_reply=create_date_picker_quick_reply()
         )
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+        return
+
+    # 2.7 刪除常用路線
+    if state["step"] == States.WAITING_FOR_ROUTE_CHOICE and text.startswith("刪除路線:"):
+        bus_type = state.get("bus", "hohsin")
+        fav_key = f"favorites_{bus_type}"
+        idx = int(text.split(":")[1])
+        if user_id in users and fav_key in users[user_id] and 0 <= idx < len(users[user_id][fav_key]):
+            removed = users[user_id][fav_key].pop(idx)
+            save_users(users)
+            msg = f"✅ 已刪除常用路線：\n{removed['name']}"
+        else:
+            msg = "❌ 刪除失敗，找不到該路線。"
+        
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=msg)]))
+        # 重新顯示常用清單
+        favs = users.get(user_id, {}).get(fav_key, [])
+        if not favs:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(False)]))
+        else:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_favorites_carousel(favs)]))
         return
 
     # 3. 選擇上車站
@@ -754,11 +777,13 @@ def handle_message(event):
 
     # 10. 儲存常用路線並啟動監控
     if state["step"] == States.WAITING_FOR_SAVE_ROUTE and text.startswith("存路線:"):
+        bus_type = state.get("bus", "hohsin")
+        fav_key = f"favorites_{bus_type}"
         if text == "存路線:是":
             if user_id not in users: users[user_id] = {}
-            if "favorites" not in users[user_id]: users[user_id]["favorites"] = []
-            if not any(f["from"] == state["from_stn"] and f["to"] == state["to_stn"] for f in users[user_id]["favorites"]):
-                users[user_id]["favorites"].append({"from": state["from_stn"], "to": state["to_stn"], "name": f"{state['from_stn_name']}-{state['to_stn_name']}"})
+            if fav_key not in users[user_id]: users[user_id][fav_key] = []
+            if not any(f["from"] == state["from_stn"] and f["to"] == state["to_stn"] for f in users[user_id][fav_key]):
+                users[user_id][fav_key].append({"from": state["from_stn"], "to": state["to_stn"], "name": f"{state['from_stn_name']}-{state['to_stn_name']}"})
                 save_users(users)
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
         return
