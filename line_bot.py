@@ -219,12 +219,12 @@ def create_bus_card():
     footer = [
         {
             "type": "button",
-            "action": {"type": "message", "label": "🚌 和欣客運", "text": "客運:和欣"},
+            "action": {"type": "message", "label": "🚌 和欣客運", "text": "客運:hohsin"},
             "style": "primary", "color": THEME_COLOR
         },
         {
             "type": "button",
-            "action": {"type": "message", "label": "🚆 台灣鐵路", "text": "客運:台鐵"},
+            "action": {"type": "message", "label": "🚆 台灣鐵路", "text": "客運:tra"},
             "style": "secondary", "margin": "sm"
         }
     ]
