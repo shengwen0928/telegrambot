@@ -119,10 +119,28 @@ class TaiwanRailwayAPI:
             # 1. 初始化快速訂票 Session (包含獲取 CSRF)
             await self.init_session(mode="quick")
             
-            # 2. 獲取驗證碼
-            captcha_text = await self.get_captcha()
+            # 更新 Referer 為查詢頁面
+            query_url = f"{self.BASE_URL}/tip001/tip121/query"
+            self.client.headers.update({
+                "Referer": query_url,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Cache-Control": "max-age=0",
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Upgrade-Insecure-Requests": "1"
+            })
+            
+            # 2. 獲取驗證碼 (最多嘗試 3 次辨識出 6 碼)
+            captcha_text = ""
+            for _ in range(3):
+                c = await self.get_captcha()
+                import re
+                c = re.sub(r'[^a-zA-Z0-9]', '', c)
+                if len(c) == 6:
+                    captcha_text = c
+                    break
+            
             if not captcha_text:
-                logger.error("無法獲取或辨識驗證碼，停止訂票。")
+                logger.error("無法獲取有效的 6 碼驗證碼，停止訂票。")
                 return False
 
             url = f"{self.BASE_URL}/tip001/tip121/bookingTicket"
@@ -130,6 +148,7 @@ class TaiwanRailwayAPI:
             from_full = f"{from_stn}-{TR_STATIONS.get(from_stn, '')}"
             to_full = f"{to_stn}-{TR_STATIONS.get(to_stn, '')}"
             
+            # 精確模擬真實瀏覽器發送的 Payload (排除 action-token，因其為 JS 動態生成)
             payload = {
                 "_csrf": self.csrf_token,
                 "custIdTypeEnum": "PERSON_ID",
@@ -139,22 +158,44 @@ class TaiwanRailwayAPI:
                 "tripType": "ONEWAY",
                 "orderType": "BY_TIME",
                 "normalQty": str(num_tickets),
+                "wheelChairQty": "0",
+                "parentChildQty": "0",
                 "ticketOrderParamList[0].tripNo": "TRIP1",
                 "ticketOrderParamList[0].rideDate": date.replace("-", "/"),
                 "ticketOrderParamList[0].startOrEndTime": "true",
                 "ticketOrderParamList[0].startTime": start_time,
                 "ticketOrderParamList[0].endTime": end_time,
-                "cvCode": captcha_text,  # 加入驗證碼
-                "verifyType": "V",       # 驗證類型 (V 代表 Image)
+                "ticketOrderParamList[0].seatPref": "NONE",
+                # Spring 框架的勾選標記
+                "_ticketOrderParamList[0].trainTypeList": ["on"] * 6,
+                "ticketOrderParamList[0].chgSeat": "true",
+                "_ticketOrderParamList[0].chgSeat": "on",
+                "g-recaptcha-response": captcha_text,
+                "verifyType": "text",
+                "isSecondVerify": "true",
                 "quickTipToken": self.complete_token,
+                "action-token": "", # 加入空 token 欄位
                 "action-name": "submit_form"
             }
             
+            # 模擬人類輸入後的延遲
+            import asyncio, random
+            await asyncio.sleep(random.uniform(0.5, 1.5))
+            
+            # 執行訂票 POST
             resp = await self.client.post(url, data=payload)
             
             if "訂票成功" in resp.text or "成功代碼" in resp.text:
                 logger.info("訪客訂票成功！")
                 return True
+            
+            # 檢查重定向 (Location)
+            if resp.status_code == 302:
+                location = resp.headers.get("Location", "")
+                if "query" not in location and ("tip121" in location or "tip123" in location):
+                    logger.info(f"訂票後跳轉至非查詢頁面: {location}，視為成功。")
+                    return True
+                logger.error(f"訂票失敗，被跳轉回: {location}")
             
             if "error=true" in str(resp.url) or "請輸入正確" in resp.text:
                 logger.error("訪客訂票失敗：驗證碼錯誤或參數不正確。")
