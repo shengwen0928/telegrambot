@@ -170,7 +170,7 @@ class TaiwanRailwayAPI:
                 "_ticketOrderParamList[0].chgSeat": "on",
                 "ticketOrderParamList[0].seatPref": "NONE",
                 "ticketOrderParamList[0].trainTypeList": ["11", "1", "2", "3", "4", "5"],
-                "_ticketOrderParamList[0].trainTypeList": "on",
+                "_ticketOrderParamList[0].trainTypeList": ["on"] * 6,
                 "g-recaptcha-response": captcha_text,
                 "verifyCode": captcha_text,
                 "verifyType": "text",
@@ -195,7 +195,16 @@ class TaiwanRailwayAPI:
                 if "query" not in location and ("tip121" in location or "tip123" in location):
                     logger.info(f"訂票後跳轉至非查詢頁面: {location}，視為成功。")
                     return True
-                logger.error(f"訂票失敗，被跳轉回查詢頁面，請檢查身分證或驗證碼準確度。")
+                
+                # 追蹤跳轉後的錯誤訊息
+                error_url = location if location.startswith("http") else f"https://tip.railway.gov.tw{location}"
+                error_resp = await self.client.get(error_url)
+                if "驗證碼錯誤" in error_resp.text:
+                    logger.error("訂票失敗：驗證碼辨識錯誤，將自動重試。")
+                elif "身分證" in error_resp.text or "格式錯誤" in error_resp.text:
+                    logger.error("訂票失敗：身分證字號無效或不符合台鐵規範。")
+                else:
+                    logger.error(f"訂票失敗，被跳轉回查詢頁面：{location}")
             
             if "請輸入正確" in resp.text:
                 logger.error("伺服器報錯：請輸入正確驗證碼或參數。")
