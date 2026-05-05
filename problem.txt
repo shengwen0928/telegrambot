@@ -1,30 +1,15 @@
-(venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
-INFO:     Started server process [41125]
-INFO:     Waiting for application startup.
-2026-05-01 10:57:40,769 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-01 10:57:40,770 - LineBot - INFO - LINE Bot 伺服器已啟動！
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-01 10:58:17,603 - TR_Monitor - INFO - 開始監控台鐵：2026-05-09 0900->1080
-2026-05-01 10:58:18,374 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip008/tip811/memberLogin "HTTP/1.1 200 OK"
-2026-05-01 10:58:19,230 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/login "HTTP/1.1 302 Moved Temporarily"
-2026-05-01 10:58:19,709 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip008/tip811/memberLogin?error=true "HTTP/1.1 200 OK"
-2026-05-01 10:58:19,857 - TR_API - ERROR - 台鐵登入失敗，回傳狀態碼: 200
-2026-05-01 10:58:20,559 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/query "HTTP/1.1 200 OK"
-2026-05-01 10:58:21,214 - TR_API - INFO - 成功獲取查詢頁面 CSRF Token: 21d68768...
-2026-05-01 10:58:21,682 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/queryTrain "HTTP/1.1 302 Moved Temporarily"
-2026-05-01 10:58:22,169 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip123/query "HTTP/1.1 200 OK"
-2026-05-01 10:58:22,946 - TR_Monitor - INFO - 未找到符合條件的班次，等待下次查詢...
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-05 00:44:24,384 - TR_Monitor - INFO - 開始監控台鐵 (訪客模式)：2026-05-05 0900->0930
+2026-05-05 00:44:24,384 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 1 次)
+2026-05-05 00:44:25,037 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 00:44:25,666 - TR_API - INFO - 獲取 quick CSRF 成功: 4eea03cf...
+2026-05-05 00:44:26,149 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
+2026-05-05 00:44:26,710 - TR_API - INFO - 台鐵驗證碼辨識結果: AL6SB5
+2026-05-05 00:44:27,183 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
+2026-05-05 00:44:27,674 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 00:44:40,123 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 2 次)
+2026-05-05 00:44:40,598 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 00:44:41,224 - TR_API - INFO - 獲取 quick CSRF 成功: 4eea03cf...
+2026-05-05 00:44:41,708 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
+2026-05-05 00:44:41,737 - TR_API - INFO - 台鐵驗證碼辨識結果: MQ5ARQ
+2026-05-05 00:44:42,196 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
+2026-05-05 00:44:42,669 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
