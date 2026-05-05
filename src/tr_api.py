@@ -119,13 +119,14 @@ class TaiwanRailwayAPI:
             # 1. 初始化快速訂票 Session (包含獲取 CSRF)
             await self.init_session(mode="quick")
             
-            # 更新 Referer 為查詢頁面
+            # 更新 Referer 為查詢頁面，並設定擬真 Headers
             query_url = f"{self.BASE_URL}/tip001/tip121/query"
             self.client.headers.update({
                 "Referer": query_url,
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-                "Cache-Control": "max-age=0",
-                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Origin": "https://tip.railway.gov.tw",
                 "Upgrade-Insecure-Requests": "1"
             })
             
@@ -148,11 +149,11 @@ class TaiwanRailwayAPI:
             from_full = f"{from_stn}-{TR_STATIONS.get(from_stn, '')}"
             to_full = f"{to_stn}-{TR_STATIONS.get(to_stn, '')}"
             
-            # 精確模擬真實瀏覽器發送的 Payload
+            # 完整模擬官方 Payload (包含 Spring 標記與二階驗證欄位)
             payload = {
                 "_csrf": self.csrf_token,
                 "custIdTypeEnum": "PERSON_ID",
-                "pid": pid,
+                "pid": pid.upper(),
                 "startStation": from_full,
                 "endStation": to_full,
                 "tripType": "ONEWAY",
@@ -165,13 +166,13 @@ class TaiwanRailwayAPI:
                 "ticketOrderParamList[0].startOrEndTime": "true",
                 "ticketOrderParamList[0].startTime": start_time,
                 "ticketOrderParamList[0].endTime": end_time,
-                "ticketOrderParamList[0].seatPref": "NONE",
-                # 勾選車種 (傳送多個同名參數)
-                "ticketOrderParamList[0].trainTypeList": ["11", "1", "2", "3", "4", "5"],
-                "_ticketOrderParamList[0].trainTypeList": "on", # Spring marker 只需一個
                 "ticketOrderParamList[0].chgSeat": "true",
                 "_ticketOrderParamList[0].chgSeat": "on",
+                "ticketOrderParamList[0].seatPref": "NONE",
+                "ticketOrderParamList[0].trainTypeList": ["11", "1", "2", "3", "4", "5"],
+                "_ticketOrderParamList[0].trainTypeList": "on",
                 "g-recaptcha-response": captcha_text,
+                "verifyCode": captcha_text,
                 "verifyType": "text",
                 "isSecondVerify": "true",
                 "quickTipToken": self.complete_token,
@@ -179,24 +180,27 @@ class TaiwanRailwayAPI:
                 "action-name": "submit_form"
             }
             
-            # 模擬人類輸入後的延遲
             import asyncio, random
             await asyncio.sleep(random.uniform(0.5, 1.5))
             
-            # 執行訂票 POST
-            resp = await self.client.post(url, data=payload)
+            # 重要：follow_redirects=False 以觀察伺服器真正的回應
+            resp = await self.client.post(url, data=payload, follow_redirects=False)
             
             if "訂票成功" in resp.text or "成功代碼" in resp.text:
                 logger.info("訪客訂票成功！")
                 return True
             
-            # 檢查重定向 (Location)
             if resp.status_code == 302:
                 location = resp.headers.get("Location", "")
                 if "query" not in location and ("tip121" in location or "tip123" in location):
                     logger.info(f"訂票後跳轉至非查詢頁面: {location}，視為成功。")
                     return True
-                logger.error(f"訂票失敗，被跳轉回: {location}")
+                logger.error(f"訂票失敗，被跳轉回查詢頁面，請檢查身分證或驗證碼準確度。")
+            
+            if "請輸入正確" in resp.text:
+                logger.error("伺服器報錯：請輸入正確驗證碼或參數。")
+            
+            return False
             
             if "error=true" in str(resp.url) or "請輸入正確" in resp.text:
                 logger.error("訪客訂票失敗：驗證碼錯誤或參數不正確。")

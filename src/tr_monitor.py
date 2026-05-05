@@ -3,11 +3,13 @@ import logging
 from typing import Optional, List
 from .tr_api import TaiwanRailwayAPI
 
+from .tr_stations import TR_STATIONS
+
 logger = logging.getLogger("TR_Monitor")
 
 class TaiwanRailwayMonitor:
     """台鐵搶票監控器。"""
-    
+
     def __init__(
         self,
         from_station: str,
@@ -23,6 +25,8 @@ class TaiwanRailwayMonitor:
         self.api = TaiwanRailwayAPI()
         self.from_station = from_station
         self.to_station = to_station
+        self.from_name = TR_STATIONS.get(from_station, from_station)
+        self.to_name = TR_STATIONS.get(to_station, to_station)
         self.travel_date = travel_date
         self.start_time = start_time
         self.end_time = end_time
@@ -38,8 +42,8 @@ class TaiwanRailwayMonitor:
 
     async def run(self):
         """主監控循環 (優先使用訪客模式達成最高搶票效率)。"""
-        logger.info(f"開始監控台鐵 (訪客模式)：{self.travel_date} {self.from_station}->{self.to_station}")
-        
+        logger.info(f"開始監控台鐵 (訪客模式)：{self.travel_date} {self.from_name} ({self.start_time}) -> {self.to_name} ({self.end_time})")
+
         # 不需要在此初始化，guest_book_ticket 每次都會初始化以確保 Token 最新
 
         retry_count = 0
@@ -48,7 +52,7 @@ class TaiwanRailwayMonitor:
                 # 在訪客模式下，我們直接調用快速訂票端點
                 # 如果訂票成功，會回傳 True
                 logger.info(f"正在執行台鐵快速搶票嘗試... (重試第 {retry_count+1} 次)")
-                
+
                 success = await self.api.guest_book_ticket(
                     pid=self.user_id_no,
                     from_stn=self.from_station,
@@ -58,9 +62,9 @@ class TaiwanRailwayMonitor:
                     end_time=self.end_time,
                     num_tickets=self.num_tickets
                 )
-                
+
                 if success:
-                    msg = f"🎊 台鐵訪客訂票成功！\n身分證：{self.user_id_no[:3]}******{self.user_id_no[-1]}\n日期：{self.travel_date}\n區間：{self.from_station} -> {self.to_station}\n請儘速至台鐵官網「查詢訂票紀錄」並付款。"
+                    msg = f"🎊 台鐵訪客訂票成功！\n身分證：{self.user_id_no[:3]}******{self.user_id_no[-1]}\n日期：{self.travel_date}\n區間：{self.from_name} -> {self.to_name}\n時段：{self.start_time}~{self.end_time}\n請儘速至台鐵官網「查詢訂票紀錄」並付款。"
                     await self.notifier.send_message(msg)
                     self.is_running = False
                     break
