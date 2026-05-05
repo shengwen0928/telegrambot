@@ -577,6 +577,7 @@ def start_monitor_task(user_id, state, users):
 def handle_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
+    logger.info(f"收到來自 {user_id} 的訊息: {text}")
     
     # 初始化狀態
     if user_id not in user_states:
