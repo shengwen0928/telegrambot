@@ -324,14 +324,13 @@ def create_times_quick_reply(selected_date: str, bus_type: str = "hohsin"):
             ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
         ]
     else:
-        # 台鐵時段：提供更細緻的 2 小時切分
+        # 台鐵時段：採用台灣旅客最熟悉的四大區分，既簡潔又專業
         all_times = [
-            ("00:00~02:00", "02:00"), ("02:00~04:00", "04:00"),
-            ("04:00~06:00", "06:00"), ("06:00~08:00", "08:00"),
-            ("08:00~10:00", "10:00"), ("10:00~12:00", "12:00"),
-            ("12:00~14:00", "14:00"), ("14:00~16:00", "16:00"),
-            ("16:00~18:00", "18:00"), ("18:00~20:00", "20:00"),
-            ("20:00~22:00", "22:00"), ("22:00~23:59", "23:59")
+            ("🌅 凌晨 (00-06)", "06:00", "00:00~06:00"),
+            ("☀️ 上午 (06-12)", "12:00", "06:00~12:00"),
+            ("☕ 下午 (12-18)", "18:00", "12:00~18:00"),
+            ("🌙 晚上 (18-24)", "23:59", "18:00~23:59"),
+            ("📅 全天 (00-24)", "23:59", "00:00~23:59")
         ]
     
     # 強制獲取台灣時間
@@ -340,16 +339,19 @@ def create_times_quick_reply(selected_date: str, bus_type: str = "hohsin"):
     
     is_today = selected_date == now_tw.strftime("%Y-%m-%d")
     
-    # 計算「台灣現在時間 + 1 小時」作為訂票截止基準
-    deadline_time = now_tw + timedelta(hours=1)
+    # 截止基準：台灣現在 + 30 分鐘 (台鐵訂票較嚴格)
+    deadline_time = now_tw + timedelta(minutes=30)
     deadline_str = deadline_time.strftime("%H:%M")
 
     items = []
-    for display, end_time in all_times:
-        # 如果選的是今天，且「台灣現在+1小時」已經超過時段「結束時間」，則隱藏
-        if is_today and deadline_str > end_time:
-            continue
-        items.append(QuickReplyItem(action=MessageAction(label=display, text=f"時段:{display}")))
+    if bus_type == "hohsin":
+        for display, end_time in all_times:
+            if is_today and deadline_str > end_time: continue
+            items.append(QuickReplyItem(action=MessageAction(label=display, text=f"時段:{display}")))
+    else:
+        for label, end_time, real_val in all_times:
+            if is_today and deadline_str > end_time: continue
+            items.append(QuickReplyItem(action=MessageAction(label=label, text=f"時段:{real_val}")))
     
     if not items:
         return None
