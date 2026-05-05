@@ -314,14 +314,25 @@ def create_date_picker_quick_reply():
         ))
     ])
 
-def create_times_quick_reply(selected_date: str):
-    """建立時段選擇的 Quick Reply (強制台灣時區判定)"""
-    all_times = [
-        ("00:00~03:00", "03:00"), ("03:00~06:00", "06:00"), 
-        ("06:00~09:00", "09:00"), ("09:00~12:00", "12:00"),
-        ("12:00~15:00", "15:00"), ("15:00~18:00", "18:00"), 
-        ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
-    ]
+def create_times_quick_reply(selected_date: str, bus_type: str = "hohsin"):
+    """建立時段選擇的 Quick Reply (根據業者區分時段)"""
+    if bus_type == "hohsin":
+        all_times = [
+            ("00:00~03:00", "03:00"), ("03:00~06:00", "06:00"), 
+            ("06:00~09:00", "09:00"), ("09:00~12:00", "12:00"),
+            ("12:00~15:00", "15:00"), ("15:00~18:00", "18:00"), 
+            ("18:00~21:00", "21:00"), ("21:00~23:59", "23:59")
+        ]
+    else:
+        # 台鐵時段：提供更細緻的 2 小時切分
+        all_times = [
+            ("00:00~02:00", "02:00"), ("02:00~04:00", "04:00"),
+            ("04:00~06:00", "06:00"), ("06:00~08:00", "08:00"),
+            ("08:00~10:00", "10:00"), ("10:00~12:00", "12:00"),
+            ("12:00~14:00", "14:00"), ("14:00~16:00", "16:00"),
+            ("16:00~18:00", "18:00"), ("18:00~20:00", "20:00"),
+            ("20:00~22:00", "22:00"), ("22:00~23:59", "23:59")
+        ]
     
     # 強制獲取台灣時間
     tw_tz = pytz.timezone('Asia/Taipei')
@@ -804,7 +815,7 @@ def handle_postback(event):
         state["date"] = selected_date
         state["step"] = "waiting_for_time"
 
-        times_qr = create_times_quick_reply(selected_date)
+        times_qr = create_times_quick_reply(selected_date, state.get("bus", "hohsin"))
         if times_qr:
             contents = [{"type": "text", "text": f"📅 已選日期：{selected_date}\n\n最後一步，請選擇乘車時段：", "wrap": True, "size": "sm"}]
             card = FlexMessage(

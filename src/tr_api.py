@@ -148,7 +148,7 @@ class TaiwanRailwayAPI:
             from_full = f"{from_stn}-{TR_STATIONS.get(from_stn, '')}"
             to_full = f"{to_stn}-{TR_STATIONS.get(to_stn, '')}"
             
-            # 精確模擬真實瀏覽器發送的 Payload (排除 action-token，因其為 JS 動態生成)
+            # 精確模擬真實瀏覽器發送的 Payload
             payload = {
                 "_csrf": self.csrf_token,
                 "custIdTypeEnum": "PERSON_ID",
@@ -166,15 +166,16 @@ class TaiwanRailwayAPI:
                 "ticketOrderParamList[0].startTime": start_time,
                 "ticketOrderParamList[0].endTime": end_time,
                 "ticketOrderParamList[0].seatPref": "NONE",
-                # Spring 框架的勾選標記
-                "_ticketOrderParamList[0].trainTypeList": ["on"] * 6,
+                # 勾選車種 (傳送多個同名參數)
+                "ticketOrderParamList[0].trainTypeList": ["11", "1", "2", "3", "4", "5"],
+                "_ticketOrderParamList[0].trainTypeList": "on", # Spring marker 只需一個
                 "ticketOrderParamList[0].chgSeat": "true",
                 "_ticketOrderParamList[0].chgSeat": "on",
                 "g-recaptcha-response": captcha_text,
                 "verifyType": "text",
                 "isSecondVerify": "true",
                 "quickTipToken": self.complete_token,
-                "action-token": "", # 加入空 token 欄位
+                "action-token": "", 
                 "action-name": "submit_form"
             }
             
