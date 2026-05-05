@@ -195,17 +195,25 @@ class TaiwanRailwayAPI:
                 if "query" not in location and ("tip121" in location or "tip123" in location):
                     logger.info(f"訂票後跳轉至非查詢頁面: {location}，視為成功。")
                     return True
-                
+
                 # 追蹤跳轉後的錯誤訊息
                 error_url = location if location.startswith("http") else f"https://tip.railway.gov.tw{location}"
                 error_resp = await self.client.get(error_url)
-                if "驗證碼錯誤" in error_resp.text:
-                    logger.error("訂票失敗：驗證碼辨識錯誤，將自動重試。")
-                elif "身分證" in error_resp.text or "格式錯誤" in error_resp.text:
-                    logger.error("訂票失敗：身分證字號無效或不符合台鐵規範。")
+
+                # 使用 BeautifulSoup 解析真正的錯誤區塊
+                error_soup = BeautifulSoup(error_resp.text, 'html.parser')
+                alert = error_soup.find('div', {'class': 'alert'})
+                error_span = error_soup.find('span', {'class': 'error'})
+
+                if error_span:
+                    err_msg = error_span.text.strip()
+                    logger.error(f"訂票失敗，伺服器提示: {err_msg}")
+                elif alert:
+                    err_msg = alert.text.strip()
+                    logger.error(f"訂票失敗，伺服器警告: {err_msg}")
                 else:
-                    logger.error(f"訂票失敗，被跳轉回查詢頁面：{location}")
-            
+                    logger.error(f"訂票失敗，被跳轉回查詢頁面，原因不明 (可能是驗證碼錯誤)。")
+
             if "請輸入正確" in resp.text:
                 logger.error("伺服器報錯：請輸入正確驗證碼或參數。")
             
