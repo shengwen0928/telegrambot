@@ -1,19 +1,17 @@
-2026-05-05 06:16:55,224 - TR_Monitor - INFO - 開始監控台鐵 (訪客模式)：2026-05-05 基隆 (15:00) -> 七堵 (23:59)
-2026-05-05 06:16:55,224 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 1 次)
-2026-05-05 06:16:55,699 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
-2026-05-05 06:16:56,322 - TR_API - INFO - 獲取 quick CSRF 成功: d373b294...
-2026-05-05 06:16:56,793 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
-2026-05-05 06:16:56,926 - TR_API - INFO - 台鐵驗證碼辨識結果: kF4T1
-2026-05-05 06:16:57,392 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
-2026-05-05 06:16:57,419 - TR_API - INFO - 台鐵驗證碼辨識結果: wv1Jc8
-2026-05-05 06:16:58,977 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
-2026-05-05 06:16:59,496 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
-2026-05-05 06:17:00,118 - TR_API - ERROR - 訂票失敗，伺服器警告: ※請旅客認明本公司官方網站(網址：https://www.railway.gov.tw)及「台鐵e訂通」APP，並切勿使用非正版管道進行本公司車票交易，以避免權益受損。
-2026-05-05 06:17:12,120 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 2 次)
-2026-05-05 06:17:12,659 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
-2026-05-05 06:17:13,245 - TR_API - INFO - 獲取 quick CSRF 成功: d373b294...
-2026-05-05 06:17:13,716 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
-2026-05-05 06:17:13,743 - TR_API - INFO - 台鐵驗證碼辨識結果: s4bLh5
-2026-05-05 06:17:14,794 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
-2026-05-05 06:17:15,269 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
-2026-05-05 06:17:15,744 - TR_API - ERROR - 訂票失敗，伺服器警告: ※請旅客認明本公司官方網站(網址：https://www.railway.gov.tw)及「台鐵e訂通」APP，並切勿使用非正版管道進行本公司車票交易，以避免權益受損。
+2026-05-05 06:27:55,466 - TR_Monitor - INFO - 開始監控台鐵 (訪客模式)：2026-05-05 基隆 (15:00) -> 七堵 (23:59)
+2026-05-05 06:27:55,466 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 1 次)
+2026-05-05 06:27:55,965 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 06:27:56,599 - TR_API - INFO - 獲取 quick CSRF 成功: 23ce8d61...
+2026-05-05 06:27:57,343 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
+2026-05-05 06:27:57,404 - TR_API - INFO - 台鐵驗證碼辨識結果: sjvw59
+2026-05-05 06:27:58,897 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
+2026-05-05 06:27:59,364 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 06:27:59,861 - TR_API - ERROR - 訂票失敗，跳轉回查詢頁面 (疑似驗證碼辨識錯誤或 Session 過期)。
+2026-05-05 06:28:11,862 - TR_Monitor - INFO - 正在執行台鐵快速搶票嘗試... (重試第 2 次)
+2026-05-05 06:28:12,343 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 06:28:12,935 - TR_API - INFO - 獲取 quick CSRF 成功: 23ce8d61...
+2026-05-05 06:28:13,415 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/player/picture "HTTP/1.1 200 OK"
+2026-05-05 06:28:13,442 - TR_API - INFO - 台鐵驗證碼辨識結果: mp3qvw
+2026-05-05 06:28:14,531 - httpx - INFO - HTTP Request: POST https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/bookingTicket "HTTP/1.1 302 Moved Temporarily"
+2026-05-05 06:28:15,010 - httpx - INFO - HTTP Request: GET https://tip.railway.gov.tw/tra-tip-web/tip/tip001/tip121/query "HTTP/1.1 200 OK"
+2026-05-05 06:28:15,638 - TR_API - ERROR - 訂票失敗，跳轉回查詢頁面 (疑似驗證碼辨識錯誤或 Session 過期)。
