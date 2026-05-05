@@ -179,6 +179,8 @@ class States:
     WAITING_FOR_TRA_ID = "waiting_for_tra_id"
     WAITING_FOR_TRA_PASSWORD = "waiting_for_tra_password"
     WAITING_FOR_TRA_SAVE_CHOICE = "waiting_for_tra_save_choice"
+    WAITING_FOR_START_TIME = "waiting_for_start_time"
+    WAITING_FOR_END_TIME = "waiting_for_end_time"
 
 # --- 統一樣式規範 ---
 THEME_COLOR = "#00b900" # 和欣綠
@@ -357,6 +359,58 @@ def create_times_quick_reply(selected_date: str, bus_type: str = "hohsin"):
         return None
         
     return QuickReply(items=items)
+
+def create_precise_time_carousel(prefix: str, selected_date: str, min_time: str = "00:00"):
+    """建立 30 分鐘一格的精確時間輪播選單"""
+    tw_tz = pytz.timezone('Asia/Taipei')
+    now_tw = datetime.now(tw_tz)
+    is_today = selected_date == now_tw.strftime("%Y-%m-%d")
+    
+    # 截止基準：台灣現在 + 30 分鐘
+    deadline_time = now_tw + timedelta(minutes=30)
+    deadline_str = deadline_time.strftime("%H:%M")
+    
+    # 產生所有 30 分鐘間隔
+    times = []
+    h, m = 0, 0
+    while h < 24:
+        t_str = f"{h:02d}:{m:02d}"
+        
+        # 過濾邏輯
+        skip = False
+        if is_today and t_str < deadline_str:
+            skip = True
+        if t_str < min_time:
+            skip = True
+            
+        if not skip:
+            times.append(t_str)
+            
+        m += 30
+        if m >= 60:
+            m = 0
+            h += 1
+            
+    if prefix == "結束" and (not is_today or "23:59" >= deadline_str): 
+        times.append("23:59")
+
+    bubbles = []
+    chunk_size = 4
+    for i in range(0, len(times), chunk_size):
+        chunk = times[i:i + chunk_size]
+        buttons = []
+        for t in chunk:
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": t, "text": f"{prefix}:{t}"},
+                "style": "secondary", "margin": "sm", "height": "sm"
+            })
+        
+        bubble = create_base_flex_card(f"⏱️ 選擇{prefix}時間", buttons)
+        bubbles.append(bubble)
+        if len(bubbles) == 12: break # LINE 限制 12 張
+
+    return FlexMessage(alt_text=f"請選擇{prefix}時間", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
 def create_ticket_count_quick_reply():
     """建立購買張數的 Quick Reply"""
@@ -718,7 +772,32 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
-    # 6. 選擇時段
+    # 6.1 台鐵：選擇出發時間
+    if state["step"] == States.WAITING_FOR_START_TIME and text.startswith("出發:"):
+        start_t = text.split(":")[1]
+        state.update({"start_time": start_t, "step": States.WAITING_FOR_END_TIME})
+        card = create_precise_time_carousel("結束", state["date"], min_time=start_t)
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+        return
+
+    # 6.2 台鐵：選擇結束時間
+    if state["step"] == States.WAITING_FOR_END_TIME and text.startswith("結束:"):
+        end_t = text.split(":")[1]
+        state.update({
+            "end_time": end_t,
+            "time_range": f"{state['start_time']}~{end_t}",
+            "step": States.WAITING_FOR_COUNT
+        })
+        contents = [{"type": "text", "text": f"⏰ 已選時段：{state['time_range']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
+        card = FlexMessage(
+            alt_text="選擇張數", 
+            contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
+            quick_reply=create_ticket_count_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+        return
+
+    # 6. 選擇時段 (原和欣流程)
     if state["step"] == States.WAITING_FOR_TIME and text.startswith("時段:"):
         state.update({"time_range": text[3:], "step": States.WAITING_FOR_COUNT})
         
@@ -815,26 +894,32 @@ def handle_postback(event):
     if state["step"] == States.WAITING_FOR_DATE and event.postback.data == "action=select_date":
         selected_date = event.postback.params['date'] # 格式 YYYY-MM-DD
         state["date"] = selected_date
-        state["step"] = "waiting_for_time"
+        bus_type = state.get("bus", "hohsin")
 
-        times_qr = create_times_quick_reply(selected_date, state.get("bus", "hohsin"))
-        if times_qr:
-            contents = [{"type": "text", "text": f"📅 已選日期：{selected_date}\n\n最後一步，請選擇乘車時段：", "wrap": True, "size": "sm"}]
-            card = FlexMessage(
-                alt_text="選擇時段", 
-                contents=FlexContainer.from_dict(create_base_flex_card("⏰ 時段設定", contents)),
-                quick_reply=times_qr
-            )
+        if bus_type == "tra":
+            state["step"] = States.WAITING_FOR_START_TIME
+            card = create_precise_time_carousel("出發", selected_date)
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         else:
-            state["step"] = States.WAITING_FOR_DATE
-            contents = [{"type": "text", "text": f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的時段皆已截止，請選擇其他日期。", "wrap": True, "size": "sm", "color": DANGER_COLOR}]
-            card = FlexMessage(
-                alt_text="時段已截止", 
-                contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)),
-                quick_reply=create_date_picker_quick_reply()
-            )
+            state["step"] = "waiting_for_time"
+            times_qr = create_times_quick_reply(selected_date, bus_type)
+            if times_qr:
+                contents = [{"type": "text", "text": f"📅 已選日期：{selected_date}\n\n最後一步，請選擇乘車時段：", "wrap": True, "size": "sm"}]
+                card = FlexMessage(
+                    alt_text="選擇時段", 
+                    contents=FlexContainer.from_dict(create_base_flex_card("⏰ 時段設定", contents)),
+                    quick_reply=times_qr
+                )
+            else:
+                state["step"] = States.WAITING_FOR_DATE
+                contents = [{"type": "text", "text": f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的時段皆已截止，請選擇其他日期。", "wrap": True, "size": "sm", "color": DANGER_COLOR}]
+                card = FlexMessage(
+                    alt_text="時段已截止", 
+                    contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)),
+                    quick_reply=create_date_picker_quick_reply()
+                )
 
-        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
 
 
 # --- 啟動設定 ---
