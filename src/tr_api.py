@@ -97,14 +97,34 @@ class TaiwanRailwayAPI:
             logger.error(f"初始化 {mode} Session 失敗: {e}")
             return ""
 
-    async def guest_book_ticket(self, pid: str, from_stn: str, to_stn: str, date: str, start_time: str, end_time: str) -> bool:
+    async def get_captcha(self) -> str:
+        """下載並辨識台鐵驗證碼。"""
+        try:
+            url = f"{self.BASE_URL}/player/picture"
+            resp = await self.client.get(url)
+            if resp.status_code == 200:
+                captcha_text = self.ocr.classify(resp.content)
+                logger.info(f"台鐵驗證碼辨識結果: {captcha_text}")
+                return captcha_text
+            return ""
+        except Exception as e:
+            logger.error(f"獲取驗證碼失敗: {e}")
+            return ""
+
+    async def guest_book_ticket(self, pid: str, from_stn: str, to_stn: str, date: str, start_time: str, end_time: str, num_tickets: int = 1) -> bool:
         """
         使用「快速訂票 (訪客模式)」直接訂票。
         """
         try:
-            # 1. 初始化快速訂票 Session
+            # 1. 初始化快速訂票 Session (包含獲取 CSRF)
             await self.init_session(mode="quick")
             
+            # 2. 獲取驗證碼
+            captcha_text = await self.get_captcha()
+            if not captcha_text:
+                logger.error("無法獲取或辨識驗證碼，停止訂票。")
+                return False
+
             url = f"{self.BASE_URL}/tip001/tip121/bookingTicket"
             
             from_full = f"{from_stn}-{TR_STATIONS.get(from_stn, '')}"
@@ -118,25 +138,26 @@ class TaiwanRailwayAPI:
                 "endStation": to_full,
                 "tripType": "ONEWAY",
                 "orderType": "BY_TIME",
-                "normalQty": "1",
+                "normalQty": str(num_tickets),
                 "ticketOrderParamList[0].tripNo": "TRIP1",
                 "ticketOrderParamList[0].rideDate": date.replace("-", "/"),
                 "ticketOrderParamList[0].startOrEndTime": "true",
                 "ticketOrderParamList[0].startTime": start_time,
                 "ticketOrderParamList[0].endTime": end_time,
-                "quickTipToken": self.complete_token, # 在 quick 模式下這存的是 quickTipToken
+                "cvCode": captcha_text,  # 加入驗證碼
+                "verifyType": "V",       # 驗證類型 (V 代表 Image)
+                "quickTipToken": self.complete_token,
                 "action-name": "submit_form"
             }
             
-            # 台鐵快速訂票通常會直接回傳結果
             resp = await self.client.post(url, data=payload)
             
             if "訂票成功" in resp.text or "成功代碼" in resp.text:
-                logger.info("訪客訂票可能成功，請檢查日誌或手機。")
+                logger.info("訪客訂票成功！")
                 return True
             
             if "error=true" in str(resp.url) or "請輸入正確" in resp.text:
-                logger.error("訪客訂票失敗：參數錯誤或驗證碼攔截。")
+                logger.error("訪客訂票失敗：驗證碼錯誤或參數不正確。")
             
             return False
         except Exception as e:

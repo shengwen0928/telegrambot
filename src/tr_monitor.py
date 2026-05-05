@@ -40,8 +40,7 @@ class TaiwanRailwayMonitor:
         """主監控循環 (優先使用訪客模式達成最高搶票效率)。"""
         logger.info(f"開始監控台鐵 (訪客模式)：{self.travel_date} {self.from_station}->{self.to_station}")
         
-        # 1. 嘗試初始化 Session
-        await self.api.init_session(mode="quick")
+        # 不需要在此初始化，guest_book_ticket 每次都會初始化以確保 Token 最新
 
         retry_count = 0
         while self.is_running:
@@ -56,7 +55,8 @@ class TaiwanRailwayMonitor:
                     to_stn=self.to_station,
                     date=self.travel_date,
                     start_time=self.start_time,
-                    end_time=self.end_time
+                    end_time=self.end_time,
+                    num_tickets=self.num_tickets
                 )
                 
                 if success:
