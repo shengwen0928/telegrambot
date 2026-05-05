@@ -201,11 +201,6 @@ class TaiwanRailwayAPI:
                 logger.error("伺服器報錯：請輸入正確驗證碼或參數。")
             
             return False
-            
-            if "error=true" in str(resp.url) or "請輸入正確" in resp.text:
-                logger.error("訪客訂票失敗：驗證碼錯誤或參數不正確。")
-            
-            return False
         except Exception as e:
             logger.error(f"訪客訂票發生異常: {e}")
             return False

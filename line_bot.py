@@ -775,7 +775,7 @@ def handle_message(event):
 
     # 6.1 台鐵：選擇出發時間
     if state["step"] == States.WAITING_FOR_START_TIME and text.startswith("出發:"):
-        start_t = text.split(":")[1]
+        start_t = text.split(":", 1)[1]
         state.update({"start_time": start_t, "step": States.WAITING_FOR_END_TIME})
         card = create_precise_time_carousel("結束", state["date"], min_time=start_t)
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
@@ -783,7 +783,7 @@ def handle_message(event):
 
     # 6.2 台鐵：選擇結束時間
     if state["step"] == States.WAITING_FOR_END_TIME and text.startswith("結束:"):
-        end_t = text.split(":")[1]
+        end_t = text.split(":", 1)[1]
         state.update({
             "end_time": end_t,
             "time_range": f"{state['start_time']}~{end_t}",
