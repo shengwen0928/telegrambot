@@ -836,97 +836,87 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
-    # 6. 選擇時段 (原和欣流程 -> 改為方案 B 班次選擇)
+    # 6. 選擇時段 (原和欣流程 -> 改為方案 B 班次選擇 + 班表補完)
     if state["step"] == States.WAITING_FOR_TIME and text.startswith("時段:"):
         state["time_range"] = text[3:]
         time_parts = state["time_range"].split("~")
         
-        async def fetch_shifts_and_reply():
+        async def fetch_full_shifts_and_reply():
             try:
-                # 取得該時段所有班次
-                # 強制傳入 isVacantOnly=false (已在 src/hohsin_api.py 中修改)
-                schedules = await global_api.get_schedules(
-                    state["from_stn"], 
-                    state["to_stn"], 
-                    state["date"], 
-                    time_parts[0], 
-                    time_parts[1]
+                # 1. 取得今日即時有票的班次
+                realtime_schedules = await global_api.get_schedules(
+                    state["from_stn"], state["to_stn"], state["date"], time_parts[0], time_parts[1]
                 )
                 
-                if not schedules:
-                    # 備案 A：嘗試抓取「全天」班次再過濾
-                    all_day_schedules = await global_api.get_schedules(
-                        state["from_stn"], 
-                        state["to_stn"], 
-                        state["date"], 
-                        "00:00", 
-                        "23:59"
-                    )
-                    schedules = [
-                        s for s in all_day_schedules 
-                        if time_parts[0] <= s.get("intoStationDepartureTime", "").split("T")[1][:5] <= time_parts[1]
-                    ]
+                # 2. 取得未來參考班次 (假設 7 天後一定有參考價值)
+                orig_date = datetime.strptime(state["date"], "%Y-%m-%d")
+                ref_date = (orig_date + timedelta(days=7)).strftime("%Y-%m-%d")
+                ref_schedules = await global_api.get_schedules(
+                    state["from_stn"], state["to_stn"], ref_date, time_parts[0], time_parts[1]
+                )
+                
+                # 3. 合併班次 (以時間為 Key)
+                # 結構: { "18:15": { "dailyScheduleId": 123, "vacantSeats": 5, "is_real": True } }
+                merged = {}
+                
+                # 先填入參考班次 (預設客滿)
+                for s in ref_schedules:
+                    t = s.get("intoStationDepartureTime", "").split("T")[1][:5]
+                    merged[t] = {
+                        "id": s.get("dailyScheduleId"),
+                        "time": t,
+                        "vacant": 0,
+                        "is_real": False
+                    }
+                
+                # 用即時資料覆蓋或更新
+                for s in realtime_schedules:
+                    t = s.get("intoStationDepartureTime", "").split("T")[1][:5]
+                    merged[t] = {
+                        "id": s.get("dailyScheduleId"),
+                        "time": t,
+                        "vacant": s.get("vacantSeats", 0),
+                        "is_real": True
+                    }
+                
+                # 排序
+                final_list = sorted(merged.values(), key=lambda x: x["time"])
 
-                if not schedules:
-                    # 備案 B：如果該日真的沒票 (客滿)，自動查「下週同日」當作時刻表參考
-                    try:
-                        orig_date = datetime.strptime(state["date"], "%Y-%m-%d")
-                        future_date = (orig_date + timedelta(days=7)).strftime("%Y-%m-%d")
-                        
-                        # 為了保險，如果下週還客滿，查 14 天後
-                        ref_schedules = await global_api.get_schedules(
-                            state["from_stn"], state["to_stn"], future_date, time_parts[0], time_parts[1]
-                        )
-                        if not ref_schedules:
-                            future_date_2 = (orig_date + timedelta(days=14)).strftime("%Y-%m-%d")
-                            ref_schedules = await global_api.get_schedules(
-                                state["from_stn"], state["to_stn"], future_date_2, time_parts[0], time_parts[1]
-                            )
-                        
-                        if ref_schedules:
-                            # 建立「建議班次」卡片
-                            bubbles = []
-                            chunk_size = 4
-                            for i in range(0, len(ref_schedules), chunk_size):
-                                chunk = ref_schedules[i:i + chunk_size]
-                                buttons = []
-                                for s in chunk:
-                                    time = s.get("intoStationDepartureTime", "").split("T")[1][:5]
-                                    buttons.append({
-                                        "type": "button",
-                                        "action": {"type": "message", "label": f"🕒 {time} (死守)", "text": f"班次:手動|{time}"},
-                                        "style": "secondary", "margin": "sm", "height": "sm"
-                                    })
-                                bubble = create_base_flex_card("💡 建議監控班次", buttons)
-                                bubble["body"]["contents"].insert(0, {"type": "text", "text": f"該時段已客滿，為您參考 {future_date} 的班表提供以下建議：", "wrap": True, "size": "xs", "color": "#666666"})
-                                bubbles.append(bubble)
-                                if len(bubbles) == 5: break
-                            
-                            msg = FlexMessage(alt_text="建議班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
-                            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[msg]))
-                            return
-                    except Exception as e:
-                        logger.error(f"獲取參考班次失敗: {e}")
-
-                    # 如果連建議都抓不到，才跳手動輸入卡片
-                    contents = [{"type": "text", "text": f"⚠️ 該時段 ({state['time_range']}) 目前查無可用班次。\n\n這通常是因為班次已客滿。您可以點擊下方按鈕直接輸入您知道的時間。", "wrap": True, "size": "sm"}]
+                if not final_list:
+                    # 如果真的連參考都抓不到
+                    contents = [{"type": "text", "text": f"⚠️ 該時段 ({state['time_range']}) 查無班次資訊。", "wrap": True, "size": "sm"}]
                     footer = [{"type": "button", "action": {"type": "message", "label": "⌨️ 手動輸入精確時間", "text": "班次:手動輸入"}, "style": "primary", "color": THEME_COLOR}]
-                    line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="無班次提示", contents=FlexContainer.from_dict(create_base_flex_card("🚌 班次提醒", contents, footer)))]))
+                    line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="無班次", contents=FlexContainer.from_dict(create_base_flex_card("🚌 班次提醒", contents, footer)))]))
                     return
 
-                state["step"] = States.WAITING_FOR_SHIFT
-                line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token, 
-                    messages=[create_shifts_carousel(schedules)]
-                ))
-            except Exception as e:
-                logger.error(f"獲取班次失敗: {e}")
-                line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=event.reply_token, 
-                    messages=[TextMessage(text=f"❌ 查詢班次發生錯誤: {e}")]
-                ))
+                # 4. 建立輪播選單
+                bubbles = []
+                chunk_size = 4
+                for i in range(0, len(final_list), chunk_size):
+                    chunk = final_list[i:i + chunk_size]
+                    buttons = []
+                    for s in chunk:
+                        label = f"{s['time']} ({'有票' if s['vacant'] > 0 else '客滿'})"
+                        # 如果是即時有的，傳 ID；如果是補位的，傳時間
+                        val = f"{s['id']}|{s['time']}" if s['is_real'] else f"手動|{s['time']}"
+                        buttons.append({
+                            "type": "button",
+                            "action": {"type": "message", "label": label, "text": f"班次:{val}"},
+                            "style": "primary" if s['vacant'] > 0 else "secondary",
+                            "margin": "sm", "height": "sm"
+                        })
+                    bubble = create_base_flex_card("🚌 選擇班次", buttons)
+                    bubble["body"]["contents"].insert(0, {"type": "text", "text": "綠色可直接訂，灰色將開啟死守監控：", "size": "xs", "color": "#666666"})
+                    bubbles.append(bubble)
 
-        asyncio.create_task(fetch_shifts_and_reply())
+                state["step"] = States.WAITING_FOR_SHIFT
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
+
+            except Exception as e:
+                logger.error(f"獲取完整班次失敗: {e}")
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 查詢發生錯誤: {e}")] ))
+
+        asyncio.create_task(fetch_full_shifts_and_reply())
         return
 
     # 6.3 處理班次選擇 (方案 B)
