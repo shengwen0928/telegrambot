@@ -27,7 +27,8 @@ class HohsinMonitor:
         notifier = None,
         user_phone: Optional[str] = None,
         user_password: Optional[str] = None,
-        manual_seats: Optional[List[int]] = None
+        manual_seats: Optional[List[int]] = None,
+        target_schedule_id: Optional[int] = None
     ):
         """
         初始化監控器。
@@ -43,6 +44,7 @@ class HohsinMonitor:
             user_phone: 用戶手機。
             user_password: 用戶密碼。
             manual_seats: 使用者指定要搶的座號清單。
+            target_schedule_id: 指定監控的班次 ID (選填)。
         """
         self.api = HohsinAPI()
         self.notifier = notifier if notifier else TelegramNotifier()
@@ -56,6 +58,7 @@ class HohsinMonitor:
         self.user_phone = user_phone
         self.user_password = user_password
         self.manual_seats = manual_seats
+        self.target_schedule_id = target_schedule_id
         self.num_tickets = 1 # 預設 1 張，可由外部修改
 
     async def _login_with_retry(self) -> bool:
@@ -212,6 +215,10 @@ class HohsinMonitor:
                 # 2. 檢查有無餘票 (使用正確欄位 vacantSeats)
                 target_schedule = None
                 for s in schedules:
+                    # 如果有指定班次，跳過不符合的
+                    if self.target_schedule_id and s.get("dailyScheduleId") != self.target_schedule_id:
+                        continue
+                        
                     vacant_count = s.get("vacantSeats", 0)
                     if vacant_count > 0:
                         target_schedule = s

@@ -175,6 +175,7 @@ class States:
     WAITING_FOR_SEAT_MODE = "waiting_for_seat_mode"
     WAITING_FOR_MANUAL_SEATS = "waiting_for_manual_seats"
     WAITING_FOR_SAVE_ROUTE = "waiting_for_save_route"
+    WAITING_FOR_SHIFT = "waiting_for_shift"
     # 台鐵專用狀態
     WAITING_FOR_TRA_ID = "waiting_for_tra_id"
     WAITING_FOR_TRA_PASSWORD = "waiting_for_tra_password"
@@ -448,6 +449,34 @@ def create_task_list_carousel(tasks):
         bubbles.append(bubble)
     return FlexMessage(alt_text="📡 您的任務清單", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
+def create_shifts_carousel(schedules: List[Dict[str, Any]]):
+    """建立班次選擇輪播卡片 (方案 B)"""
+    bubbles = []
+    # 每 4 個班次一組
+    chunk_size = 4
+    for i in range(0, len(schedules), chunk_size):
+        chunk = schedules[i:i + chunk_size]
+        buttons = []
+        for s in chunk:
+            time = s.get("intoStationDepartureTime", "??:??")
+            vacant = s.get("vacantSeats", 0)
+            schedule_id = s.get("dailyScheduleId")
+            
+            label = f"{time} ({'有票' if vacant > 0 else '無票'})"
+            buttons.append({
+                "type": "button",
+                "action": {"type": "message", "label": label, "text": f"班次:{schedule_id}|{time}"},
+                "style": "primary" if vacant > 0 else "secondary",
+                "margin": "sm", "height": "sm"
+            })
+            
+        bubble = create_base_flex_card("🚌 選擇特定班次", buttons)
+        bubble["body"]["contents"].insert(0, {"type": "text", "text": "請選擇您要「精確監控」的班次：", "size": "xs", "color": "#666666"})
+        bubbles.append(bubble)
+        if len(bubbles) == 12: break
+
+    return FlexMessage(alt_text="🚌 選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
+
 def get_station_name(stn_id: str, bus_type: str = "hohsin") -> str:
     """根據業者類型獲取車站名稱"""
     if bus_type == "hohsin":
@@ -504,7 +533,7 @@ def start_monitor_task(user_id, state, users):
                 ]},
                 {"type": "box", "layout": "horizontal", "contents": [
                     {"type": "text", "text": "⏰ 時段", "size": "xs", "color": "#aaaaaa", "flex": 2},
-                    {"type": "text", "text": time_range, "size": "xs", "color": "#666666", "flex": 5}
+                    {"type": "text", "text": state.get("shift_time") or time_range, "size": "xs", "color": "#666666", "flex": 5}
                 ]},
                 {"type": "box", "layout": "horizontal", "contents": [
                     {"type": "text", "text": "🎫 張數", "size": "xs", "color": "#aaaaaa", "flex": 2},
@@ -544,7 +573,8 @@ def start_monitor_task(user_id, state, users):
             notifier=LineNotifier(user_id),
             user_phone=state["phone"],
             user_password=state["password"],
-            manual_seats=state.get("manual_seats")
+            manual_seats=state.get("manual_seats"),
+            target_schedule_id=state.get("target_schedule_id")
         )
     else:
         monitor = TaiwanRailwayMonitor(
@@ -798,11 +828,53 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
         return
 
-    # 6. 選擇時段 (原和欣流程)
+    # 6. 選擇時段 (原和欣流程 -> 改為方案 B 班次選擇)
     if state["step"] == States.WAITING_FOR_TIME and text.startswith("時段:"):
-        state.update({"time_range": text[3:], "step": States.WAITING_FOR_COUNT})
+        state["time_range"] = text[3:]
+        time_parts = state["time_range"].split("~")
         
-        contents = [{"type": "text", "text": f"⏰ 已選時段：{state['time_range']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
+        async def fetch_shifts_and_reply():
+            try:
+                # 取得該時段所有班次
+                schedules = await global_api.get_schedules(
+                    state["from_stn"], 
+                    state["to_stn"], 
+                    state["date"], 
+                    time_parts[0], 
+                    time_parts[1]
+                )
+                if not schedules:
+                    line_bot_api.reply_message(ReplyMessageRequest(
+                        reply_token=event.reply_token, 
+                        messages=[TextMessage(text="⚠️ 該時段目前無任何班次，請嘗試其他時段。")]
+                    ))
+                    return
+
+                state["step"] = States.WAITING_FOR_SHIFT
+                line_bot_api.reply_message(ReplyMessageRequest(
+                    reply_token=event.reply_token, 
+                    messages=[create_shifts_carousel(schedules)]
+                ))
+            except Exception as e:
+                logger.error(f"獲取班次失敗: {e}")
+                line_bot_api.reply_message(ReplyMessageRequest(
+                    reply_token=event.reply_token, 
+                    messages=[TextMessage(text=f"❌ 查詢班次發生錯誤: {e}")]
+                ))
+
+        asyncio.create_task(fetch_shifts_and_reply())
+        return
+
+    # 6.3 處理班次選擇 (方案 B)
+    if state["step"] == States.WAITING_FOR_SHIFT and text.startswith("班次:"):
+        parts = text.split(":")[1].split("|")
+        state.update({
+            "target_schedule_id": int(parts[0]),
+            "shift_time": parts[1],
+            "step": States.WAITING_FOR_COUNT
+        })
+        
+        contents = [{"type": "text", "text": f"⏰ 已選班次：{state['shift_time']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
         card = FlexMessage(
             alt_text="選擇張數", 
             contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
