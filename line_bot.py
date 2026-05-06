@@ -836,6 +836,7 @@ def handle_message(event):
         async def fetch_shifts_and_reply():
             try:
                 # 取得該時段所有班次
+                # 強制傳入 isVacantOnly=false (已在 src/hohsin_api.py 中修改)
                 schedules = await global_api.get_schedules(
                     state["from_stn"], 
                     state["to_stn"], 
@@ -843,10 +844,26 @@ def handle_message(event):
                     time_parts[0], 
                     time_parts[1]
                 )
+                
+                if not schedules:
+                    # 備案：如果該時段沒回傳，嘗試抓取「全天」班次再過濾
+                    all_day_schedules = await global_api.get_schedules(
+                        state["from_stn"], 
+                        state["to_stn"], 
+                        state["date"], 
+                        "00:00", 
+                        "23:59"
+                    )
+                    # 手動過濾時段
+                    schedules = [
+                        s for s in all_day_schedules 
+                        if time_parts[0] <= s.get("intoStationDepartureTime", "").split("T")[1][:5] <= time_parts[1]
+                    ]
+
                 if not schedules:
                     line_bot_api.reply_message(ReplyMessageRequest(
                         reply_token=event.reply_token, 
-                        messages=[TextMessage(text="⚠️ 該時段目前無任何班次，請嘗試其他時段。")]
+                        messages=[TextMessage(text=f"⚠️ 該日期 ({state['date']}) 的 {state['time_range']} 目前查無任何班次。")]
                     ))
                     return
 
