@@ -522,7 +522,12 @@ def start_monitor_task(user_id, state, users):
     from_name = state["from_stn_name"]
     to_name = state["to_stn_name"]
     time_range = state["time_range"]
-    time_parts = time_range.split("~")
+    
+    # 修正：如果已經選了精確班次，就不需要去切分 time_range，直接使用選定的班次時間
+    if state.get("shift_time"):
+        time_parts = [state["shift_time"], state["shift_time"]]
+    else:
+        time_parts = time_range.split("~")
     
     contents = [
         {
