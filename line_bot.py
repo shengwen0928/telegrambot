@@ -869,9 +869,14 @@ def handle_message(event):
                     ]
 
                 if not schedules:
+                    # 即使沒班次，也要提供手動輸入的機會，因為可能只是客滿被 API 隱藏了
+                    contents = [{"type": "text", "text": f"⚠️ 該時段 ({state['time_range']}) 目前查無可用班次。\n\n這通常是因為班次已客滿被系統隱藏。您可以選擇「手動輸入時間」來進行死守監控。", "wrap": True, "size": "sm"}]
+                    footer = [
+                        {"type": "button", "action": {"type": "message", "label": "⌨️ 手動輸入精確時間", "text": "班次:手動輸入"}, "style": "primary", "color": THEME_COLOR}
+                    ]
                     line_bot_api.reply_message(ReplyMessageRequest(
                         reply_token=event.reply_token, 
-                        messages=[TextMessage(text=f"⚠️ 該日期 ({state['date']}) 的 {state['time_range']} 目前查無任何班次。")]
+                        messages=[FlexMessage(alt_text="無班次提示", contents=FlexContainer.from_dict(create_base_flex_card("🚌 班次提醒", contents, footer)))]
                     ))
                     return
 
