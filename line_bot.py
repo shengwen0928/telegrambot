@@ -930,11 +930,17 @@ def handle_message(event):
             return
 
         parts = choice.split("|")
+        # 修正：處理 '手動|17:50' 這種格式
+        sched_id = None if parts[0] == "手動" else int(parts[0])
         state.update({
-            "target_schedule_id": int(parts[0]),
+            "target_schedule_id": sched_id,
             "shift_time": parts[1],
             "step": States.WAITING_FOR_COUNT
         })
+        
+        # 關鍵修正：如果是建議班次（無 ID），則將時間區間縮小到該分鐘，實現精確監控
+        if sched_id is None:
+            state["time_range"] = f"{state['shift_time']}~{state['shift_time']}"
         
         contents = [{"type": "text", "text": f"⏰ 已選班次：{state['shift_time']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
         card = FlexMessage(
