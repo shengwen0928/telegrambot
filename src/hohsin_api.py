@@ -200,7 +200,8 @@ class HohsinAPI:
             "departureDate": travel_date.replace("-", "/"),
             "beginDepartureTime": start_time,
             "endDepartureTime": end_time,
-            "isVacantOnly": "false"  # 強制要求包含無票班次
+            "isVacantOnly": "false",
+            "isIncludeSoldOut": "true"
         }
         # 即使登入了，此 API 仍需使用預設 Token
         headers = self.headers.copy()

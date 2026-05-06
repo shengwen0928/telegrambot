@@ -176,6 +176,7 @@ class States:
     WAITING_FOR_MANUAL_SEATS = "waiting_for_manual_seats"
     WAITING_FOR_SAVE_ROUTE = "waiting_for_save_route"
     WAITING_FOR_SHIFT = "waiting_for_shift"
+    WAITING_FOR_MANUAL_SHIFT_TIME = "waiting_for_manual_shift_time"
     # 台鐵專用狀態
     WAITING_FOR_TRA_ID = "waiting_for_tra_id"
     WAITING_FOR_TRA_PASSWORD = "waiting_for_tra_password"
@@ -472,6 +473,13 @@ def create_shifts_carousel(schedules: List[Dict[str, Any]]):
             
         bubble = create_base_flex_card("🚌 選擇特定班次", buttons)
         bubble["body"]["contents"].insert(0, {"type": "text", "text": "請選擇您要「精確監控」的班次：", "size": "xs", "color": "#666666"})
+        
+        # 加入手動輸入按鈕
+        bubble["footer"] = {
+            "type": "box", "layout": "vertical", "contents": [
+                {"type": "button", "action": {"type": "message", "label": "⌨️ 找不到？手動輸入時間", "text": "班次:手動輸入"}, "style": "link", "color": "#666666"}
+            ]
+        }
         bubbles.append(bubble)
         if len(bubbles) == 12: break
 
@@ -884,7 +892,15 @@ def handle_message(event):
 
     # 6.3 處理班次選擇 (方案 B)
     if state["step"] == States.WAITING_FOR_SHIFT and text.startswith("班次:"):
-        parts = text.split(":")[1].split("|")
+        choice = text.split(":")[1]
+        
+        if choice == "手動輸入":
+            state["step"] = States.WAITING_FOR_MANUAL_SHIFT_TIME
+            contents = [{"type": "text", "text": "⌨️ 請輸入您要監控的【精確時間】。\n(例如: 10:15)", "wrap": True, "size": "sm", "weight": "bold"}]
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入時間", contents=FlexContainer.from_dict(create_base_flex_card("⌨️ 時間輸入", contents)))]))
+            return
+
+        parts = choice.split("|")
         state.update({
             "target_schedule_id": int(parts[0]),
             "shift_time": parts[1],
@@ -892,6 +908,30 @@ def handle_message(event):
         })
         
         contents = [{"type": "text", "text": f"⏰ 已選班次：{state['shift_time']}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
+        card = FlexMessage(
+            alt_text="選擇張數", 
+            contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
+            quick_reply=create_ticket_count_quick_reply()
+        )
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+        return
+
+    # 6.4 處理手動班次時間輸入
+    if state["step"] == States.WAITING_FOR_MANUAL_SHIFT_TIME:
+        # 簡單驗證時間格式 HH:MM
+        import re
+        if not re.match(r"^\d{2}:\d{2}$", text):
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 格式錯誤，請使用 HH:MM (例如 10:15)")] ))
+            return
+            
+        state.update({
+            "shift_time": text,
+            "time_range": f"{text}~{text}", # 精確鎖定該時間
+            "target_schedule_id": None,     # 清除特定 ID，改用時間鎖定
+            "step": States.WAITING_FOR_COUNT
+        })
+        
+        contents = [{"type": "text", "text": f"⏰ 已設定精確監控：{text}\n\n請選擇欲購買的張數。", "wrap": True, "size": "sm"}]
         card = FlexMessage(
             alt_text="選擇張數", 
             contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),

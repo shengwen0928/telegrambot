@@ -211,6 +211,12 @@ class HohsinMonitor:
                     self.start_time,
                     self.end_time
                 )
+
+                if self.target_schedule_id:
+                    logger.info(f"正在精確監控班次 ID: {self.target_schedule_id}")
+                elif self.start_time == self.end_time:
+                    logger.info(f"正在精確監控時間: {self.start_time}")
+
                 
                 # 2. 檢查有無餘票 (使用正確欄位 vacantSeats)
                 target_schedule = None
