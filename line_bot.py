@@ -647,7 +647,7 @@ def handle_message(event):
 
     # 1.6 執行取消
     if text.startswith("取消任務:"):
-        idx = int(text.split(":")[1])
+        idx = int(text.split(":", 1)[1])
         if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
             m = running_tasks[user_id].pop(idx)
             m.stop() 
