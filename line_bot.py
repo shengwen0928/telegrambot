@@ -459,7 +459,9 @@ def create_shifts_carousel(schedules: List[Dict[str, Any]]):
         chunk = schedules[i:i + chunk_size]
         buttons = []
         for s in chunk:
-            time = s.get("intoStationDepartureTime", "??:??")
+            raw_time = s.get("intoStationDepartureTime", "??:??")
+            # 修正：如果時間包含 T (ISO 格式)，只取 HH:MM
+            time = raw_time.split("T")[1][:5] if "T" in raw_time else raw_time
             vacant = s.get("vacantSeats", 0)
             schedule_id = s.get("dailyScheduleId")
             
