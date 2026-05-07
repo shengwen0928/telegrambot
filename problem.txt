@@ -1,58 +1,28 @@
-2026-05-06 23:18:17,159 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 班次:手動|17:50
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 500 Internal Server Error
-ERROR:    Exception in ASGI application
-Traceback (most recent call last):
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/protocols/http/h11_impl.py", line 415, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 56, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
-    await route.handle(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 120, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 674, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 509, in callback
-    handler.handle(body_str, signature)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 242, in handle
-    self.__invoke_func(func, event, payload)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 254, in __invoke_func
-    func(event)
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 934, in handle_message
-    "target_schedule_id": int(parts[0]),
-                          ^^^^^^^^^^^^^
-ValueError: invalid literal for int() with base 10: '手動'
-                
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-06 23:55:25,966 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 張數:1
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-06 23:55:31,069 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 選位:自動
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-06 23:55:32,173 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-06 23:55:32,174 - HohsinMonitor - INFO - 🚀 監控啟動
+路線：朝轉 (D0A) -> 嘉義交流道 (C05)
+日期：2026-05-08
+範圍：17 - 17
+2026-05-06 23:55:32,349 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
+2026-05-06 23:55:33,104 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-06 23:55:33,258 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-06 23:55:34,823 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-06 23:55:35,082 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-06 23:55:35,083 - HohsinMonitor - INFO - 登入成功！
+2026-05-06 23:55:35,360 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-06 23:55:35,361 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-06 23:55:35,361 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-06 23:55:37,692 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-06 23:55:37,693 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-06 23:55:37,693 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-06 23:55:40,201 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-06 23:55:40,207 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-06 23:55:40,207 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-06 23:55:42,274 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-06 23:55:42,275 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-06 23:55:42,275 - HohsinMonitor - INFO - 目前無餘票，等待中...
