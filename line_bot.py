@@ -133,11 +133,18 @@ class LineNotifier:
             req = PushMessageRequest(to=self.user_id, messages=[msg])
             line_bot_api.push_message(req)
         except Exception as e:
+            error_str = str(e)
+            if "monthly limit" in error_str or "429" in error_str:
+                logger.error(f"LINE API 配額已耗盡 (429)，無法發送通知: {text}")
+                return # 停止重試
+            
             logger.error(f"LINE 推播失敗: {e}")
             # 回退機制：萬一 Flex 失敗，發送純文字
             try:
                 line_bot_api.push_message(PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)]))
-            except: pass
+            except Exception as e2:
+                if "monthly limit" not in str(e2) and "429" not in str(e2):
+                    logger.error(f"LINE 純文字回退推播亦失敗: {e2}")
 
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }

@@ -165,22 +165,35 @@ class HohsinMonitor:
                 logger.warning(f"班次 {departure_time} 無法匹配合適座位。")
                 return False
 
-            # 3. 執行訂票
+            # 3. 執行訂位
             logger.info(f"最終選定座位: {selected_seats}，執行訂位...")
             result = await self.api.book_ticket(schedule, selected_seats)
-            
+
             if result.get("success") or result.get("result"):
                 msg = f"🎉 搶票成功！\n日期：{self.travel_date}\n班次：{departure_time}\n張數：{num_tickets}\n座位：{', '.join(map(str, selected_seats))}"
                 logger.info(msg)
                 await self.notifier.send_message(msg)
                 return True
             else:
+                error_data = result.get("error", {})
+                error_msg = error_data.get("message", "未知錯誤")
+
+                # 偵測終止性錯誤：重複訂位
+                if "三小時內已有訂單" in error_msg:
+                    final_msg = f"🛑 偵測到重複訂位衝突：{error_msg}\n系統將停止此監控任務，請先手動檢查現有訂單。"
+                    logger.error(final_msg)
+                    await self.notifier.send_message(final_msg)
+                    self.is_running = False # 終止監控
+                    return False
+
                 logger.error(f"訂位失敗: {result}")
-                await self.notifier.send_message(f"❌ 訂位失敗！回應：{result}")
-                
+                await self.notifier.send_message(f"❌ 訂位失敗！回應：{error_msg}")
+
         except Exception as e:
             logger.error(f"自動訂位過程發生錯誤: {str(e)}")
-            await self.notifier.send_message(f"⚠️ 自動訂位出錯: {str(e)}")
+            # 避免在 loop 中瘋狂發送重複的系統錯誤通知
+            if "500" not in str(e): 
+                await self.notifier.send_message(f"⚠️ 自動訂位出錯: {str(e)}")
             
         return False
 

@@ -1,10 +1,13 @@
 import os
 import httpx
+import logging
 from typing import List, Dict, Any, Optional
 from .ocr_engine import OCREngine
 from dotenv import load_dotenv
 
 load_dotenv()
+
+logger = logging.getLogger("HohsinAPI")
 
 class HohsinAPI:
     """和欣客運 API 通訊模組。"""
@@ -171,10 +174,19 @@ class HohsinAPI:
         }
         
         response = await self.client.post(url, json=payload)
+        
+        # 嘗試解析 JSON，不論狀態碼為何
+        try:
+            result_data = response.json()
+        except Exception:
+            result_data = {"success": False, "error": {"message": response.text}}
+
         if response.status_code != 200:
-            print(f"訂位 API 失敗: {response.status_code}, 內容: {response.text}")
-        response.raise_for_status()
-        return response.json()
+            logger.error(f"訂位 API 失敗: {response.status_code}, 內容: {response.text}")
+            # 如果 API 回傳了標準的錯誤格式，我們直接返回該資料
+            return result_data
+            
+        return result_data
 
     async def get_stations(self) -> List[Dict[str, Any]]:
         """獲取車站清單（使用預設 Token）。"""
