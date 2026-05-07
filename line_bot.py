@@ -498,6 +498,13 @@ def create_shifts_carousel(schedules: List[Dict[str, Any]]):
 
     return FlexMessage(alt_text="🚌 選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))
 
+def create_confirm_cancel_quick_reply(idx: int):
+    """建立停止任務的二次確認 Quick Reply"""
+    return QuickReply(items=[
+        QuickReplyItem(action=MessageAction(label="✅ 是，確定停止", text=f"確認取消:是:{idx}")),
+        QuickReplyItem(action=MessageAction(label="❌ 否，繼續監控", text="確認取消:否"))
+    ])
+
 def get_station_name(stn_id: str, bus_type: str = "hohsin") -> str:
     """根據業者類型獲取車站名稱"""
     if bus_type == "hohsin":
@@ -658,9 +665,28 @@ def handle_message(event):
         line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_task_list_carousel(tasks)]))
         return
 
-    # 1.6 執行取消
+    # 1.6 發起取消確認
     if text.startswith("取消任務:"):
         idx = int(text.split(":", 1)[1])
+        if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
+            m = running_tasks[user_id][idx]
+            bus_type = "hohsin" if isinstance(m, HohsinMonitor) else "tra"
+            from_name = get_station_name(m.from_station, bus_type)
+            to_name = get_station_name(m.to_station, bus_type)
+            
+            info_text = f"📍 路線：{from_name} ➡️ {to_name}\n📅 日期：{m.travel_date}\n⏰ 時段：{m.start_time}~{m.end_time}"
+            confirm_msg = TextMessage(
+                text=f"⚠️ 您確定要「停止」此監控任務嗎？\n\n{info_text}",
+                quick_reply=create_confirm_cancel_quick_reply(idx)
+            )
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[confirm_msg]))
+        else:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 找不到該任務，可能已被系統自動終止。")]))
+        return
+
+    # 1.7 執行最終取消
+    if text.startswith("確認取消:是:"):
+        idx = int(text.split(":", 2)[2])
         if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
             m = running_tasks[user_id].pop(idx)
             m.stop() 
@@ -669,7 +695,13 @@ def handle_message(event):
             to_name = get_station_name(m.to_station, bus_type)
             reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {from_name}➡️{to_name}", "wrap": True, "size": "sm"}])))
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
-            return
+        else:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="⚠️ 停止失敗：找不到該任務，可能已由系統完成或已手動移除。")]))
+        return
+
+    if text == "確認取消:否":
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="👌 好的，監控將繼續執行！")]))
+        return
 
     # 2. 選擇業者
     if state["step"] == States.WAITING_FOR_BUS and text.startswith("客運:"):
