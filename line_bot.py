@@ -446,9 +446,13 @@ def create_task_list_carousel(tasks):
     """建立任務清單的輪播選單"""
     bubbles = []
     for i, m in enumerate(tasks):
-        bus_name = "和欣" if isinstance(m, HohsinMonitor) else "台鐵"
+        bus_type = "hohsin" if isinstance(m, HohsinMonitor) else "tra"
+        bus_name = "和欣" if bus_type == "hohsin" else "台鐵"
+        from_name = get_station_name(m.from_station, bus_type)
+        to_name = get_station_name(m.to_station, bus_type)
+        
         bubble = create_base_flex_card(f"📡 任務 #{i+1} ({bus_name})", [
-            {"type": "text", "text": f"📍 {m.from_station} ➡️ {m.to_station}", "weight": "bold", "size": "sm"},
+            {"type": "text", "text": f"📍 {from_name} ➡️ {to_name}", "weight": "bold", "size": "sm"},
             {"type": "text", "text": f"📅 {m.travel_date}", "size": "xs"},
             {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "xs"}
         ], [
@@ -660,7 +664,10 @@ def handle_message(event):
         if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
             m = running_tasks[user_id].pop(idx)
             m.stop() 
-            reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {m.from_station}➡️{m.to_station}", "wrap": True, "size": "sm"}])))
+            bus_type = "hohsin" if isinstance(m, HohsinMonitor) else "tra"
+            from_name = get_station_name(m.from_station, bus_type)
+            to_name = get_station_name(m.to_station, bus_type)
+            reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {from_name}➡️{to_name}", "wrap": True, "size": "sm"}])))
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
             return
 
