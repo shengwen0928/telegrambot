@@ -1,28 +1,34 @@
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-06 23:55:25,966 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 張數:1
+2026-05-07 00:06:14,357 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 張數:1
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-06 23:55:31,069 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 選位:自動
+2026-05-07 00:06:18,878 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 選位:自動
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-06 23:55:32,173 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-06 23:55:32,174 - HohsinMonitor - INFO - 🚀 監控啟動
+2026-05-07 00:06:20,550 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-07 00:06:20,551 - HohsinMonitor - INFO - 🚀 監控啟動
 路線：朝轉 (D0A) -> 嘉義交流道 (C05)
 日期：2026-05-08
 範圍：17 - 17
-2026-05-06 23:55:32,349 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
-2026-05-06 23:55:33,104 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-06 23:55:33,258 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-06 23:55:34,823 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-06 23:55:35,082 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-06 23:55:35,083 - HohsinMonitor - INFO - 登入成功！
-2026-05-06 23:55:35,360 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-06 23:55:35,361 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-06 23:55:35,361 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-06 23:55:37,692 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-06 23:55:37,693 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-06 23:55:37,693 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-06 23:55:40,201 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-06 23:55:40,207 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-06 23:55:40,207 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-06 23:55:42,274 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-06 23:55:42,275 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-06 23:55:42,275 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:20,728 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
+2026-05-07 00:06:21,476 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-07 00:06:21,630 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-07 00:06:22,095 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-07 00:06:22,364 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-07 00:06:22,365 - HohsinMonitor - INFO - 登入成功！
+2026-05-07 00:06:22,650 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:22,651 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:22,651 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:25,945 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:25,945 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:25,945 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:28,355 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:28,356 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:28,356 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:30,995 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:30,996 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:30,996 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:33,410 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:33,411 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:33,411 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-07 00:06:35,729 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
+2026-05-07 00:06:35,730 - HohsinMonitor - INFO - 正在精確監控時間: 17
+2026-05-07 00:06:35,730 - HohsinMonitor - INFO - 目前無餘票，等待中...
