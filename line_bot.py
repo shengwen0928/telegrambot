@@ -928,7 +928,7 @@ def handle_message(event):
 
     # 6.3 處理班次選擇 (方案 B)
     if state["step"] == States.WAITING_FOR_SHIFT and text.startswith("班次:"):
-        choice = text.split(":")[1]
+        choice = text.split(":", 1)[1]
         
         if choice == "手動輸入":
             state["step"] = States.WAITING_FOR_MANUAL_SHIFT_TIME
