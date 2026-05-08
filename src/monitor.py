@@ -215,6 +215,8 @@ class HohsinMonitor:
         self.is_running = True
         
         while self.is_running:
+            self.attempt_count += 1
+            self.last_check_time = datetime.now().strftime("%H:%M:%S")
             try:
                 # 1. 查詢班次
                 schedules = await self.api.get_schedules(

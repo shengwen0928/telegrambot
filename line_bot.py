@@ -1145,6 +1145,8 @@ def handle_postback(event):
 async def startup_event():
     # 預先載入車站清單
     await init_stations()
+    # 恢復之前的任務
+    await recover_all_tasks()
     logger.info("LINE Bot 伺服器已啟動！")
 
 if __name__ == "__main__":

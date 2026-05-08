@@ -48,6 +48,8 @@ class TaiwanRailwayMonitor:
 
         retry_count = 0
         while self.is_running:
+            self.attempt_count += 1
+            self.last_check_time = datetime.now().strftime("%H:%M:%S")
             try:
                 # 在訪客模式下，我們直接調用快速訂票端點
                 # 如果訂票成功，會回傳 True
