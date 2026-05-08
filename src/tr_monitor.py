@@ -36,6 +36,8 @@ class TaiwanRailwayMonitor:
         self.train_no = train_no # 指定車次 (選填)
         self.is_running = True
         self.num_tickets = 1
+        self.attempt_count = 0
+        self.last_check_time = None
 
     def stop(self):
         self.is_running = False

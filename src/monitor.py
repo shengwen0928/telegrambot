@@ -60,6 +60,8 @@ class HohsinMonitor:
         self.manual_seats = manual_seats
         self.target_schedule_id = target_schedule_id
         self.num_tickets = 1 # 預設 1 張，可由外部修改
+        self.attempt_count = 0
+        self.last_check_time = None
 
     async def _login_with_retry(self) -> bool:
         """嘗試登入，具備重試機制。"""
