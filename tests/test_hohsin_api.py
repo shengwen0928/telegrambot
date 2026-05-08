@@ -11,7 +11,8 @@ async def test_hohsin_api_integration():
         success = False
         for i in range(3):  # 最多嘗試 3 次辨識驗證碼
             print(f"登入嘗試 {i+1}...")
-            if await api.login():
+            if await api.login("0912345678", "password"):
+
                 success = True
                 break
         

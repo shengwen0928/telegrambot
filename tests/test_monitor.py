@@ -58,9 +58,9 @@ async def test_monitor_flow():
     mock_api.login.assert_called()
     mock_api.get_schedules.assert_called_with("G03", "B01", "2026-05-01", "10:00", "12:00")
     mock_api.get_seating_plans.assert_called_with(12345, "G03", "B01", travel_date="2026-05-01", start_time="10:00", end_time="12:00")
-    mock_api.book_ticket.assert_called_with(mock_schedules[0], 2)    
+    mock_api.book_ticket.assert_called_with(mock_schedules[0], [2])    
     # 驗證通知
-    assert mock_notifier.send_message.call_count >= 2 # 啟動通知 + 成功通知
+    assert mock_notifier.send_message.call_count >= 1 # 僅成功通知
     last_call_args = mock_notifier.send_message.call_args[0][0]
     assert "🎉 搶票成功" in last_call_args
 
