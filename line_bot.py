@@ -41,6 +41,9 @@ from src.persistence import save_tasks_to_file, load_tasks_from_file
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("LineBot")
 
+# 全域通知機器人實例預定義，防止 NameError
+line_bot_api_notify = None
+
 USER_DB_FILE = "users.json"
 
 def load_users() -> Dict[str, Dict[str, str]]:
@@ -63,16 +66,27 @@ def save_users(data: Dict[str, Dict[str, str]]):
 load_dotenv()
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+# 備援通知機器人 Token
+LINE_NOTIFY_ACCESS_TOKEN = os.getenv("LINE_NOTIFY_ACCESS_TOKEN")
 
 if not LINE_CHANNEL_SECRET or not LINE_CHANNEL_ACCESS_TOKEN:
     logger.error("錯誤：未設定 LINE_CHANNEL_SECRET 或 LINE_CHANNEL_ACCESS_TOKEN")
     logger.info("這是不影響系統啟動的警告，請在 .env 中補上設定。")
 
-# 初始化 FastAPI 與 LINE SDK
+# 初始化 FastAPI 與 LINE SDK (主機器人)
 app = FastAPI()
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
+
+# 初始化備援通知機器人 (如果有的話)
+line_bot_api_notify = None
+if LINE_NOTIFY_ACCESS_TOKEN:
+    config_notify = Configuration(access_token=LINE_NOTIFY_ACCESS_TOKEN)
+    api_client_notify = ApiClient(config_notify)
+    line_bot_api_notify = MessagingApi(api_client_notify)
+    logger.info("備援通知機器人已就緒。")
+
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 def create_success_card(text: str):
