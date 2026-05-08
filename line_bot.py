@@ -35,6 +35,7 @@ from src.monitor import HohsinMonitor
 from src.tr_api import TaiwanRailwayAPI
 from src.tr_stations import TR_STATIONS
 from src.tr_monitor import TaiwanRailwayMonitor
+from src.persistence import save_tasks_to_file, load_tasks_from_file
 
 # 設定日誌
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -454,7 +455,10 @@ def create_task_list_carousel(tasks):
         bubble = create_base_flex_card(f"📡 任務 #{i+1} ({bus_name})", [
             {"type": "text", "text": f"📍 {from_name} ➡️ {to_name}", "weight": "bold", "size": "sm"},
             {"type": "text", "text": f"📅 {m.travel_date}", "size": "xs"},
-            {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "xs"}
+            {"type": "text", "text": f"⏰ {m.start_time}~{m.end_time}", "size": "xs"},
+            {"type": "separator", "margin": "xs"},
+            {"type": "text", "text": f"🔄 已嘗試：{m.attempt_count} 次", "size": "xxs", "color": "#aaaaaa"},
+            {"type": "text", "text": f"⏱️ 最後檢查：{m.last_check_time or '準備中'}", "size": "xxs", "color": "#aaaaaa"}
         ], [
             {"type": "button", "action": {"type": "message", "label": "🛑 停止任務", "text": f"取消任務:{i}"}, "style": "secondary", "color": DANGER_COLOR, "height": "sm"}
         ])
@@ -626,15 +630,77 @@ def start_monitor_task(user_id, state, users):
     if user_id not in running_tasks: running_tasks[user_id] = []
     running_tasks[user_id].append(monitor)
     
+    # 同步到檔案
+    save_tasks_to_file(running_tasks)
+    
     async def run_and_cleanup():
         try: await monitor.run()
         finally:
             if user_id in running_tasks and monitor in running_tasks[user_id]:
                 running_tasks[user_id].remove(monitor)
+                save_tasks_to_file(running_tasks) # 更新檔案
     
     asyncio.create_task(run_and_cleanup())
     state["step"] = States.IDLE
     return FlexMessage(alt_text="🚀 任務啟動成功", contents=FlexContainer.from_dict(card_dict))
+
+async def recover_all_tasks():
+    """系統啟動時恢復所有監控任務"""
+    saved_tasks = load_tasks_from_file()
+    if not saved_tasks:
+        return
+    
+    logger.info(f"偵測到 {len(saved_tasks)} 個未完成任務，正在準備恢復...")
+    
+    for task in saved_tasks:
+        user_id = task["user_id"]
+        bus_type = task["bus_type"]
+        p = task["params"]
+        
+        # 準備狀態與參數
+        try:
+            if bus_type == "hohsin":
+                monitor = HohsinMonitor(
+                    from_station=p["from_station"],
+                    to_station=p["to_station"],
+                    travel_date=p["travel_date"],
+                    start_time=p["start_time"],
+                    end_time=p["end_time"],
+                    notifier=LineNotifier(user_id),
+                    user_phone=p["user_phone"],
+                    user_password=p["user_password"],
+                    manual_seats=p.get("manual_seats"),
+                    target_schedule_id=p.get("target_schedule_id")
+                )
+            else:
+                monitor = TaiwanRailwayMonitor(
+                    from_station=p["from_station"],
+                    to_station=p["to_station"],
+                    travel_date=p["travel_date"],
+                    start_time=p["start_time"],
+                    end_time=p["end_time"],
+                    notifier=LineNotifier(user_id),
+                    user_id_no=p["user_id_no"],
+                    user_password=p["user_password"]
+                )
+            
+            monitor.num_tickets = p.get("num_tickets", 1)
+            
+            if user_id not in running_tasks: running_tasks[user_id] = []
+            running_tasks[user_id].append(monitor)
+            
+            async def run_and_cleanup_internal(m=monitor, uid=user_id):
+                try: await m.run()
+                finally:
+                    if uid in running_tasks and m in running_tasks[uid]:
+                        running_tasks[uid].remove(m)
+                        save_tasks_to_file(running_tasks)
+
+            asyncio.create_task(run_and_cleanup_internal())
+        except Exception as e:
+            logger.error(f"恢復任務時發生錯誤 ({bus_type}): {e}")
+
+    logger.info("所有任務恢復指令已發出。")
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
