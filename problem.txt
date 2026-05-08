@@ -1,34 +1,16 @@
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-07 00:06:14,357 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 張數:1
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-07 00:06:18,878 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 選位:自動
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-07 00:06:20,550 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-07 00:06:20,551 - HohsinMonitor - INFO - 🚀 監控啟動
-路線：朝轉 (D0A) -> 嘉義交流道 (C05)
-日期：2026-05-08
-範圍：17 - 17
-2026-05-07 00:06:20,728 - HohsinMonitor - INFO - 正在嘗試登入... (第 1 次)
-2026-05-07 00:06:21,476 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-07 00:06:21,630 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-07 00:06:22,095 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-07 00:06:22,364 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-07 00:06:22,365 - HohsinMonitor - INFO - 登入成功！
-2026-05-07 00:06:22,650 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:22,651 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:22,651 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-07 00:06:25,945 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:25,945 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:25,945 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-07 00:06:28,355 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:28,356 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:28,356 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-07 00:06:30,995 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:30,996 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:30,996 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-07 00:06:33,410 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:33,411 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:33,411 - HohsinMonitor - INFO - 目前無餘票，等待中...
-2026-05-07 00:06:35,729 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/schedules?intoStationId=D0A&outofStationId=C05&departureDate=2026%2F05%2F08&beginDepartureTime=17&endDepartureTime=17&isVacantOnly=false&isIncludeSoldOut=true "HTTP/1.1 200 OK"
-2026-05-07 00:06:35,730 - HohsinMonitor - INFO - 正在精確監控時間: 17
-2026-05-07 00:06:35,730 - HohsinMonitor - INFO - 目前無餘票，等待中...
+2026-05-08 05:18:51,222 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-08 05:18:51,377 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-08 05:18:53,117 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-08 05:18:53,430 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-08 05:18:53,431 - HohsinMonitor - INFO - 登入成功！
+2026-05-08 05:18:53,432 - Persistence - INFO - 已同步 0 個任務至 tasks.json
+2026-05-08 05:18:53,432 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-29' coro=<start_monitor_task.<locals>.run_and_cleanup() done, defined at /home/ad565198ad56519867/telegrambot/line_bot.py:636> exception=AttributeError("'HohsinMonitor' object has no attribute 'attempt_count'")>
+Traceback (most recent call last):
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 637, in run_and_cleanup
+    try: await monitor.run()
+         ^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/src/monitor.py", line 218, in run
+    self.attempt_count += 1
+    ^^^^^^^^^^^^^^^^^^
+AttributeError: 'HohsinMonitor' object has no attribute 'attempt_count'
