@@ -206,7 +206,8 @@ class HohsinMonitor:
         
         start_msg = f"🚀 監控啟動\n路線：{from_name} ({self.from_station}) -> {to_name} ({self.to_station})\n日期：{self.travel_date}\n範圍：{self.start_time} - {self.end_time}"
         logger.info(start_msg)
-        await self.notifier.send_message(start_msg)
+        # 移除背景推播，改由 line_bot.py 透過 reply 管道發送
+        # await self.notifier.send_message(start_msg)
 
         if not await self._login_with_retry():
             error_msg = "❌ 登入失敗多次，監控停止。"
