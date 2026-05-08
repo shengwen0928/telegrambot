@@ -1,16 +1,8 @@
-2026-05-08 05:18:51,222 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-08 05:18:51,377 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-08 05:18:53,117 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-08 05:18:53,430 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-08 05:18:53,431 - HohsinMonitor - INFO - 登入成功！
-2026-05-08 05:18:53,432 - Persistence - INFO - 已同步 0 個任務至 tasks.json
-2026-05-08 05:18:53,432 - asyncio - ERROR - Task exception was never retrieved
-future: <Task finished name='Task-29' coro=<start_monitor_task.<locals>.run_and_cleanup() done, defined at /home/ad565198ad56519867/telegrambot/line_bot.py:636> exception=AttributeError("'HohsinMonitor' object has no attribute 'attempt_count'")>
-Traceback (most recent call last):
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 637, in run_and_cleanup
-    try: await monitor.run()
-         ^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/src/monitor.py", line 218, in run
-    self.attempt_count += 1
-    ^^^^^^^^^^^^^^^^^^
-AttributeError: 'HohsinMonitor' object has no attribute 'attempt_count'
+Provider
+Role
+OKX自動機器人
+Admin
+搶票
+Admin
+老婆專屬機器豬
+Admin

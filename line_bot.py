@@ -132,7 +132,9 @@ class LineNotifier:
                 msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(card_dict))
 
             req = PushMessageRequest(to=self.user_id, messages=[msg])
-            line_bot_api.push_message(req)
+            # 優先使用備援機器人發送推播，節省主機器人配額
+            client = line_bot_api_notify if line_bot_api_notify else line_bot_api
+            client.push_message(req)
         except Exception as e:
             error_str = str(e)
             if "monthly limit" in error_str or "429" in error_str:
@@ -1218,6 +1220,10 @@ async def startup_event():
 if __name__ == "__main__":
     import uvicorn
     # 本地測試時可以使用 ngrok 將 8000 port 對外暴露
+    # uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("這是一個 FastAPI 應用，請使用以下指令啟動：")
+    print("uvicorn line_bot:app --host 0.0.0.0 --port 8000")
+port 對外暴露
     # uvicorn.run(app, host="0.0.0.0", port=8000)
     print("這是一個 FastAPI 應用，請使用以下指令啟動：")
     print("uvicorn line_bot:app --host 0.0.0.0 --port 8000")
