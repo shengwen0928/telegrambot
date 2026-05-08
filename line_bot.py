@@ -772,6 +772,7 @@ def handle_message(event):
         if user_id in running_tasks and 0 <= idx < len(running_tasks[user_id]):
             m = running_tasks[user_id].pop(idx)
             m.stop() 
+            save_tasks_to_file(running_tasks)
             bus_type = "hohsin" if isinstance(m, HohsinMonitor) else "tra"
             from_name = get_station_name(m.from_station, bus_type)
             to_name = get_station_name(m.to_station, bus_type)
