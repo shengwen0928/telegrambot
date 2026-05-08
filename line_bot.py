@@ -1223,7 +1223,3 @@ if __name__ == "__main__":
     # uvicorn.run(app, host="0.0.0.0", port=8000)
     print("這是一個 FastAPI 應用，請使用以下指令啟動：")
     print("uvicorn line_bot:app --host 0.0.0.0 --port 8000")
-port 對外暴露
-    # uvicorn.run(app, host="0.0.0.0", port=8000)
-    print("這是一個 FastAPI 應用，請使用以下指令啟動：")
-    print("uvicorn line_bot:app --host 0.0.0.0 --port 8000")
