@@ -1316,11 +1316,12 @@ def handle_postback(event):
             
             if not os.path.exists(qr_path):
                 import qrcode
+                # 根據推測參數：V1 (21x21), ECC L, Quiet Zone 小
                 qr = qrcode.QRCode(
-                    version=None, # 自動選擇大小
-                    error_correction=qrcode.constants.ERROR_CORRECT_H, # 最高容錯等級
+                    version=1, # 固定為 Version 1
+                    error_correction=qrcode.constants.ERROR_CORRECT_L, # 低糾錯 (7%)，匹配官方
                     box_size=10,
-                    border=4
+                    border=2 # 較小的邊界
                 )
                 qr.add_data(ticket_no)
                 qr.make(fit=True)
