@@ -93,7 +93,7 @@ if LINE_NOTIFY_ACCESS_TOKEN:
     line_bot_api_notify = AsyncMessagingApi(async_api_client_notify)
     logger.info("備援通知機器人已就緒。")
 
-handler = AsyncWebhookHandler(LINE_CHANNEL_SECRET)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 def create_success_card(text: str):
     """將搶票成功的純文字轉換為超級精緻的金色通知卡片"""
