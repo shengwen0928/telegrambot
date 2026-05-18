@@ -820,7 +820,7 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                         ticket_bubbles.append(bubble)
 
             if not ticket_bubbles:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="找不到已付款的有效車票。")])
+                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="找不到已付款的有效車票。")]))
             else:
                 carousel = {"type": "carousel", "contents": ticket_bubbles[:10]}
                 await line_bot_api.reply_message(ReplyMessageRequest(
@@ -828,10 +828,10 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                     messages=[FlexMessage(alt_text="您的車票列表", contents=FlexContainer.from_dict(carousel))]
                 ))
         else:
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="和欣登入失敗，請檢查帳密設定。")])
+            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="和欣登入失敗，請檢查帳密設定。")]))
     except Exception as e:
         logger.error(f"獲取車票發生錯誤: {e}")
-        await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=f"系統錯誤：{str(e)}")])
+        await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=f"系統錯誤：{str(e)}")]))
     finally:
         await api.close()
 
@@ -864,11 +864,13 @@ def handle_message(event):
         if text in ["查詢", "查詢任務", "取消"]:
             tasks = running_tasks.get(user_id, [])
             if not tasks:
-                reply = FlexMessage(alt_text="無進行中任務", contents=FlexContainer.from_dict(create_base_flex_card("📡 任務管理", [{"type": "text", "text": "您目前沒有正在執行的搶票任務。", "size": "sm"}]))
+                reply = FlexMessage(alt_text="無進行中任務", contents=FlexContainer.from_dict(create_base_flex_card("📡 任務管理", [{"type": "text", "text": "您目前沒有正在執行的搶票任務。", "size": "sm"}])))
                 await safe_reply(event.reply_token, [reply], user_id)
                 return
             await safe_reply(event.reply_token, [create_task_list_carousel(tasks)], user_id)
             return
+
+
 
         # 1.6 發起取消確認
         if text.startswith("取消任務:"):
@@ -884,9 +886,9 @@ def handle_message(event):
                     text=f"⚠️ 您確定要「停止」此監控任務嗎？\n\n{info_text}",
                     quick_reply=create_confirm_cancel_quick_reply(idx)
                 )
-                await safe_reply(event.reply_token, [confirm_msg])
+                await safe_reply(event.reply_token, [confirm_msg], user_id)
             else:
-                await safe_reply(event.reply_token, [TextMessage(text="❌ 找不到該任務，可能已被系統自動終止。")])
+                await safe_reply(event.reply_token, [TextMessage(text="❌ 找不到該任務，可能已被系統自動終止。")], user_id)
             return
 
         # 1.7 執行最終取消
@@ -899,14 +901,14 @@ def handle_message(event):
                 bus_type = "hohsin" if isinstance(m, HohsinMonitor) else "tra"
                 from_name = get_station_name(m.from_station, bus_type)
                 to_name = get_station_name(m.to_station, bus_type)
-                reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {from_name}➡️{to_name}", "wrap": True, "size": "sm"}]))
+                reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {from_name}➡️{to_name}", "wrap": True, "size": "sm"}])))
                 await safe_reply(event.reply_token, [reply], user_id)
             else:
-                await safe_reply(event.reply_token, [TextMessage(text="⚠️ 停止失敗：找不到該任務，可能已由系統完成或已手動移除。")])
+                await safe_reply(event.reply_token, [TextMessage(text="⚠️ 停止失敗：找不到該任務，可能已由系統完成或已手動移除。")], user_id)
             return
 
         if text == "確認取消:否":
-            await safe_reply(event.reply_token, [TextMessage(text="👌 好的，監控將繼續執行！")])
+            await safe_reply(event.reply_token, [TextMessage(text="👌 好的，監控將繼續執行！")], user_id)
             return
 
         # 2. 選擇業者

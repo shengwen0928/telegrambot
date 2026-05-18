@@ -52,7 +52,7 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap_external>", line 1074, in get_code
   File "<frozen importlib._bootstrap_external>", line 1004, in source_to_code
   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/home/admin/telegrambot/line_bot.py", line 870
-    await safe_reply(event.reply_token, [create_task_list_carousel(tasks)]))
-                                                                           ^
-SyntaxError: unmatched ')'
+  File "/home/admin/telegrambot/line_bot.py", line 824
+    else:
+    ^^^^
+SyntaxError: invalid syntax
