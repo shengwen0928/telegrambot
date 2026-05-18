@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from linebot.v3.webhook import AsyncWebhookHandler
+from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
@@ -552,7 +552,8 @@ async def callback(request: Request):
     body_str = body.decode("utf-8")
 
     try:
-        await handler.handle(body_str, signature)
+        # 修正：標準 WebhookHandler 是同步的
+        handler.handle(body_str, signature)
     except InvalidSignatureError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
