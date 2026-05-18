@@ -243,13 +243,68 @@ class HohsinAPI:
         response.raise_for_status()
         return response.json()
 
+    async def get_resilient_qrcode(self, ticket_id: int) -> Optional[bytes]:
+        """
+        多層 Fallback 獲取 QR Code：
+        1. 嘗試 /web/tickets/{id}/qrcode
+        2. 嘗試 /web/tickets/{id} 找 qrCodeData (base64)
+        """
+        # 第一層：直接 API 下載
+        url_api = f"{self.BASE_URL}/web/tickets/{ticket_id}/qrcode"
+        try:
+            resp = await self.client.get(url_api)
+            if resp.status_code == 200:
+                if "image" in resp.headers.get("Content-Type", ""):
+                    logger.info(f"第一層成功：從 API 下載圖片 (ID: {ticket_id})")
+                    return resp.content
+                # 如果回傳 JSON，解析內部
+                data = resp.json()
+                qr_base64 = data.get("result", {}).get("qrCodeData")
+                if qr_base64:
+                    logger.info(f"第一層成功：從 API 獲取 base64 (ID: {ticket_id})")
+                    return self._decode_qr_base64(qr_base64)
+        except Exception as e:
+            logger.warning(f"第一層獲取失敗: {e}")
+
+        # 第二層：從詳情 JSON 提取
+        try:
+            detail = await self.get_ticket_detail(ticket_id)
+            qr_base64 = detail.get("qrCodeData")
+            if qr_base64:
+                logger.info(f"第二層成功：從詳情獲取 base64 (ID: {ticket_id})")
+                return self._decode_qr_base64(qr_base64)
+        except Exception as e:
+            logger.warning(f"第二層獲取失敗: {e}")
+
+        return None
+
+    def _decode_qr_base64(self, data_str: str) -> Optional[bytes]:
+        import base64
+        try:
+            if "," in data_str: data_str = data_str.split(",")[1]
+            return base64.b64decode(data_str)
+        except:
+            return None
+
     async def get_ticket_detail(self, ticket_id: int) -> Dict[str, Any]:
-        """獲取特定車票的詳細資訊 (包含潛在的 QR Code 資訊)。"""
+        """獲取特定車票的詳細資訊，並加入擬真 Header 避免被擋。"""
         url = f"{self.BASE_URL}/web/tickets/{ticket_id}"
-        response = await self.client.get(url)
-        if response.status_code == 200:
-            return response.json().get("result", {})
-        return {}
+        headers = self.headers.copy()
+        headers.update({
+            "Referer": "https://www.ebus.com.tw/Home/TicketDetail",
+            "X-Requested-With": "XMLHttpRequest"
+        })
+        
+        try:
+            response = await self.client.get(url, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                logger.info(f"成功獲取車票詳情 JSON: {data}")
+                return data.get("result", {})
+            return {}
+        except Exception as e:
+            logger.error(f"獲取車票詳情失敗: {e}")
+            return {}
 
     async def get_my_orders(self) -> List[Dict[str, Any]]:
         """獲取目前登入使用者的訂單列表。"""

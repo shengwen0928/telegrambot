@@ -1,57 +1,132 @@
+(venv) admin@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
+2026-05-18 07:44:09,132 - LineBot - INFO - 備援通知機器人已就緒。
+INFO:     Started server process [31056]
+INFO:     Waiting for application startup.
+2026-05-18 07:44:11,356 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-18 07:44:11,357 - LineBot - INFO - LINE Bot 伺服器已啟動！
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     45.148.10.67:0 - "GET / HTTP/1.0" 404 Not Found
+INFO:     184.105.247.252:0 - "GET /geoserver/web/ HTTP/1.0" 404 Not Found
+INFO:     45.205.1.80:0 - "GET / HTTP/1.0" 404 Not Found
+INFO:     45.205.1.80:0 - "PROPFIND / HTTP/1.0" 404 Not Found
+INFO:     184.105.247.252:0 - "GET /.git/config HTTP/1.0" 404 Not Found
+INFO:     46.151.178.13:0 - "PROPFIND / HTTP/1.0" 404 Not Found
+INFO:     8.231.183.24:0 - "OPTIONS / HTTP/1.0" 404 Not Found
+2026-05-18 08:36:37,356 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-18 08:36:40,425 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-18 08:36:40,931 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-18 08:36:45,133 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-18 08:36:45,493 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-18 08:36:45,494 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders
+2026-05-18 08:36:45,750 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders "HTTP/1.1 404 Not Found"
+2026-05-18 08:36:45,751 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders/upcoming
+2026-05-18 08:36:46,002 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders/upcoming "HTTP/1.1 404 Not Found"
+2026-05-18 08:36:46,003 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/members/orders
+2026-05-18 08:36:46,657 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members/orders "HTTP/1.1 200 OK"
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-18 08:36:55,600 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757
+2026-05-18 08:36:56,823 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-18 08:36:57,330 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-18 08:36:58,489 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-18 08:36:58,851 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-18 08:36:59,106 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
+2026-05-18 08:36:59,276 - LineBot - ERROR - 獲取官方圖片失敗: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '2d5ba7fa-fa2c-4580-a5f6-fe200b3942af', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}
+
+2026-05-18 08:36:59,468 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-28' coro=<handle_postback.<locals>.process_postback() done, defined at /home/admin/telegrambot/line_bot.py:1303> exception=ApiException()>
 Traceback (most recent call last):
-  File "/home/ad565198ad56519867/telegrambot/venv/bin/uvicorn", line 8, in <module>
-    sys.exit(main())
-             ^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
-    return self.main(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1406, in main
-    rv = self.invoke(ctx)
-         ^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
-    return ctx.invoke(self.callback, **ctx.params)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 824, in invoke
-    return callback(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 441, in main
-    run(
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 617, in run
-    server.run()
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
-    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
-    return runner.run(main)
-           ^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/asyncio/runners.py", line 118, in run
-    return self._loop.run_until_complete(task)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
-    return future.result()
-           ^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
-    await self._serve(sockets)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
-    config.load()
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/config.py", line 449, in load
-    self.loaded_app = import_from_string(self.app)
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
-    module = importlib.import_module(module_str)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
-  File "<frozen importlib._bootstrap_external>", line 1074, in get_code
-  File "<frozen importlib._bootstrap_external>", line 1004, in source_to_code
-  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 1226
-    port 對外暴露
-         ^^^^^^^^^^^^
-SyntaxError: invalid syntax
+  File "/home/admin/telegrambot/line_bot.py", line 1353, in process_postback
+    await line_bot_api.push_message(PushMessageRequest(
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
+    raise e
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
+    response_data = await self.request(
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
+    return (await self.request("POST", url,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
+    raise ApiException(http_resp=r)
+linebot.v3.messaging.exceptions.ApiException: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '2d5ba7fa-fa2c-4580-a5f6-fe200b3942af', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/admin/telegrambot/line_bot.py", line 1362, in process_postback
+    await line_bot_api.push_message(PushMessageRequest(
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
+    raise e
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
+    response_data = await self.request(
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
+    return (await self.request("POST", url,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
+    raise ApiException(http_resp=r)
+linebot.v3.messaging.exceptions.ApiException: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': 'c94ba58d-09f7-4f69-80fb-b41efe00a8ab', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}
+
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-18 08:37:16,829 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757
+2026-05-18 08:37:18,135 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-18 08:37:18,639 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-18 08:37:20,063 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-18 08:37:20,440 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-18 08:37:20,694 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
+2026-05-18 08:37:21,018 - LineBot - ERROR - 獲取官方圖片失敗: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '5159878f-e4eb-4b76-abf0-7a1f9c5bdac8', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}
+
+2026-05-18 08:37:21,197 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-36' coro=<handle_postback.<locals>.process_postback() done, defined at /home/admin/telegrambot/line_bot.py:1303> exception=ApiException()>
+Traceback (most recent call last):
+  File "/home/admin/telegrambot/line_bot.py", line 1353, in process_postback
+    await line_bot_api.push_message(PushMessageRequest(
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
+    raise e
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
+    response_data = await self.request(
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
+    return (await self.request("POST", url,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
+    raise ApiException(http_resp=r)
+linebot.v3.messaging.exceptions.ApiException: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '5159878f-e4eb-4b76-abf0-7a1f9c5bdac8', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/admin/telegrambot/line_bot.py", line 1362, in process_postback
+    await line_bot_api.push_message(PushMessageRequest(
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
+    raise e
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
+    response_data = await self.request(
+                    ^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
+    return (await self.request("POST", url,
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
+    raise ApiException(http_resp=r)
+linebot.v3.messaging.exceptions.ApiException: (429)
+Reason: Too Many Requests
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '113210f8-6b6e-4ebc-a3a9-befb08c081f5', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
+HTTP response body: {"message":"You have reached your monthly limit."}

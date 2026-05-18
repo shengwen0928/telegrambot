@@ -131,6 +131,9 @@ def create_success_card(text: str):
     }
     return FlexMessage(alt_text="🎊 搶票成功通知", contents=FlexContainer.from_dict(card))
 
+# 全域狀態管理
+LINE_QUOTA_EXHAUSTED = False # 當偵測到 429 時會設為 True
+
 class LineNotifier:
     """專門為 LINE 打造的通知模組"""
     def __init__(self, user_id: str):
@@ -138,36 +141,36 @@ class LineNotifier:
 
     async def send_message(self, text: str):
         """非同步發送訊息 (自動辨識成功訊息並轉為卡片)"""
+        global LINE_QUOTA_EXHAUSTED
+        if LINE_QUOTA_EXHAUSTED:
+            logger.warning(f"LINE 配額已熔斷，停止發送通知給 {self.user_id}: {text}")
+            return
+
         try:
             if "🎉 搶票成功" in text:
                 msg = create_success_card(text)
             else:
-                # 錯誤或其他提示則使用一般的紅/綠卡片
                 title = "⚠️ 系統通知" if "❌" in text or "⚠️" in text else "📢 狀態更新"
                 color = DANGER_COLOR if "❌" in text or "⚠️" in text else THEME_COLOR
-                
                 card_dict = create_base_flex_card(title, [{"type": "text", "text": text, "wrap": True, "size": "sm"}])
                 card_dict["header"]["backgroundColor"] = color
-                
                 msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(card_dict))
 
             req = PushMessageRequest(to=self.user_id, messages=[msg])
-            # 優先使用備援機器人發送推播，節省主機器人配額
             client = line_bot_api_notify if line_bot_api_notify else line_bot_api
             await client.push_message(req)
         except Exception as e:
             error_str = str(e)
             if "monthly limit" in error_str or "429" in error_str:
-                logger.error(f"LINE API 配額已耗盡 (429)，無法發送通知: {text}")
-                return # 停止重試
+                LINE_QUOTA_EXHAUSTED = True
+                logger.error(f"!!! 偵測到 LINE API 配額耗盡，啟動全域熔斷 !!!")
+                return
             
             logger.error(f"LINE 推播失敗: {e}")
-            # 回退機制：萬一 Flex 失敗，發送純文字
             try:
                 await line_bot_api.push_message(PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)]))
-            except Exception as e2:
-                if "monthly limit" not in str(e2) and "429" not in str(e2):
-                    logger.error(f"LINE 純文字回退推播亦失敗: {e2}")
+            except:
+                pass
 
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }
@@ -795,8 +798,8 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                                         "type": "button",
                                         "action": {
                                             "type": "postback",
-                                            "label": "顯示 QR Code (實驗中)",
-                                            "data": f"action=show_qrcode&ticket_no={t.get('ticketNo')}"
+                                            "label": "顯示 QR Code",
+                                            "data": f"action=show_qrcode&ticket_no={t.get('ticketNo')}&ticket_id={t.get('id')}"
                                         },
                                         "style": "primary", "color": "#00B900"
                                     }
@@ -1306,12 +1309,13 @@ def handle_postback(event):
             from urllib.parse import parse_qs
             params = parse_qs(data)
             ticket_no = params.get("ticket_no", [None])[0]
+            ticket_id = params.get("ticket_id", [None])[0]
             
-            if not ticket_no:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票編號。")]))
+            if not ticket_no or not ticket_id:
+                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票資訊。")]))
                 return
 
-            logger.info(f"收到 QR Code 生成請求: 票號 {ticket_no}")
+            logger.info(f"收到 QR Code 生成請求: 票號 {ticket_no}, ID {ticket_id}")
 
             try:
                 # 1. 建立靜態檔案目錄
@@ -1321,7 +1325,7 @@ def handle_postback(event):
                 qr_filename = f"official_{ticket_no}.png"
                 qr_path = os.path.join(static_dir, qr_filename)
                 
-                # 2. 只有當檔案不存在時，才從官方下載 (代下載模式)
+                # 2. 執行多層 Fallback 獲取邏輯
                 if not os.path.exists(qr_path):
                     api = HohsinAPI()
                     users = load_users()
@@ -1331,34 +1335,40 @@ def handle_postback(event):
                     password = hohsin_creds.get("password")
                     
                     if await api.login(phone, password):
-                        official_url = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
-                        resp = await api.client.get(official_url)
-                        if resp.status_code == 200:
+                        # 使用新開發的「韌性獲取」方法
+                        qr_bytes = await api.get_resilient_qrcode(int(ticket_id))
+                        if qr_bytes:
                             with open(qr_path, "wb") as f:
-                                f.write(resp.content)
-                            logger.info(f"成功下載官方圖片: {qr_path}")
+                                f.write(qr_bytes)
+                            logger.info(f"成功透過韌性邏輯獲取圖片: {qr_path}")
+                        else:
+                            # 如果韌性獲取也失敗，最後一招：回退到 etc/QRCode/10 (儘管不穩定)
+                            logger.warning("韌性獲取失敗，嘗試最後一招 etc/QRCode/10")
+                            url_legacy = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
+                            resp = await api.client.get(url_legacy)
+                            if resp.status_code == 200:
+                                with open(qr_path, "wb") as f:
+                                    f.write(resp.content)
                         await api.close()
                     else:
                         await api.close()
                         raise Exception("登入和欣失敗，請確認帳密設定")
 
-                # 3. 構造本地可存取的網址
+                # 3. 構造網址並發送
                 base_url = "https://my-hohsin-bot.duckdns.org"
-                # 加上隨機參數防止 LINE 快取舊圖
                 image_url = f"{base_url}/static/qrcodes/{qr_filename}?t={int(datetime.now().timestamp())}"
                 
                 from linebot.v3.messaging import ImageMessage
                 
-                # 使用 push_message 確保穩定發送 (reply_token 可能因為下載圖片太久而失效)
                 await line_bot_api.push_message(PushMessageRequest(
                     to=user_id,
                     messages=[
-                        TextMessage(text=f"✅ 已成功抓取【和欣官方】原廠電子車票\n車票編號：{ticket_no}"),
+                        TextMessage(text=f"✅ 已成功抓取【和欣官方】車票 QR Code\n車票編號：{ticket_no}"),
                         ImageMessage(original_content_url=image_url, preview_image_url=image_url)
                     ]
                 ))
             except Exception as e:
-                logger.error(f"獲取官方圖片失敗: {e}")
+                logger.error(f"獲取 QR Code 失敗: {e}")
                 await line_bot_api.push_message(PushMessageRequest(
                     to=user_id,
                     messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]

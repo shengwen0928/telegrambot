@@ -1,0 +1,12 @@
+{
+  "hooksConfig": {
+    "disabled": [
+      "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
+      "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start\"",
+      "claude-cope-loop",
+      "${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
+      "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start",
+      "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" session-start"
+    ]
+  }
+}
