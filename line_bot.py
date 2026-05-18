@@ -857,7 +857,7 @@ def handle_message(event):
         # 1. 啟動指令
         if text in ["搶票", "/start", "開始"]:
             state["step"] = States.WAITING_FOR_BUS
-            await safe_reply(event.reply_token, [create_bus_card()]))
+            await safe_reply(event.reply_token, [create_bus_card()])
             return
 
         # 1.5 查詢/取消任務
