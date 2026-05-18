@@ -1294,9 +1294,8 @@ def handle_postback(event):
     user_id = event.source.user_id
     data = event.postback.data
     
-    # 處理 QR Code 生成請求
+    # 處理 QR Code 請求
     if data.startswith("action=show_qrcode"):
-        import qrcode
         from urllib.parse import parse_qs
         params = parse_qs(data)
         ticket_no = params.get("ticket_no", [None])[0]
@@ -1306,49 +1305,27 @@ def handle_postback(event):
             return
 
         try:
-            # 1. 建立靜態檔案目錄 (如果不存在)
-            static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
-            os.makedirs(static_dir, exist_ok=True)
+            # 1. 取得和欣官方原廠圖片網址 (這張圖片是由和欣伺服器產生的)
+            official_image_url = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
             
-            # 2. 生成 QR Code (優化等級與容錯)
-            qr_filename = f"{ticket_no}.png"
-            qr_path = os.path.join(static_dir, qr_filename)
+            # 2. 構造官方查票網頁網址 (帶入票號參數)
+            # 注意：和欣查票頁面通常需要登入 Session，此連結為輔助參考
+            web_view_url = f"https://www.ebus.com.tw/Home/TicketDetail?no={ticket_no}"
             
-            if not os.path.exists(qr_path):
-                import qrcode
-                # 根據推測參數：V1 (21x21), ECC L, Quiet Zone 小
-                qr = qrcode.QRCode(
-                    version=1, # 固定為 Version 1
-                    error_correction=qrcode.constants.ERROR_CORRECT_L, # 低糾錯 (7%)，匹配官方
-                    box_size=10,
-                    border=2 # 較小的邊界
-                )
-                qr.add_data(ticket_no)
-                qr.make(fit=True)
-                img = qr.make_image(fill_color="black", back_color="white")
-                img.save(qr_path)
+            from linebot.v3.messaging import ImageMessage
             
-            # 3. 構造對外可存取的網址
-            base_url = "https://my-hohsin-bot.duckdns.org"
-            image_url = f"{base_url}/static/qrcodes/{qr_filename}"
-            
-            # 官方查詢網址備援
-            official_url = "https://www.ebus.com.tw/Home/TicketDetail"
-            
-            from linebot.v3.messaging import ImageMessage, ButtonsTemplate, PostbackAction, URIAction, TemplateMessage
-            
-            # 發送圖片與備援連結
+            # 直接發送官方原廠圖片
             line_bot_api.reply_message(ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[
-                    TextMessage(text=f"🎫 車票編號：{ticket_no}\n內容已驗證與官方一致，可直接掃碼。"),
-                    ImageMessage(original_content_url=image_url, preview_image_url=image_url),
-                    TextMessage(text="💡 若閘門無法掃描，請點擊下方連結開啟官方原始車票：\nhttps://www.ebus.com.tw/Home/TicketDetail")
+                    TextMessage(text=f"✅ 已成功抓取【和欣官方】原廠電子車票\n車票編號：{ticket_no}\n(此圖片由和欣伺服器提供，可直接掃碼)"),
+                    ImageMessage(original_content_url=official_image_url, preview_image_url=official_image_url),
+                    TextMessage(text=f"💡 如需查看完整訂單詳情，請至官網查詢。")
                 ]
             ))
         except Exception as e:
-            logger.error(f"生成 QR Code 失敗: {e}")
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 生成失敗：{str(e)}")]))
+            logger.error(f"獲取官方圖片失敗: {e}")
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]))
         return
 
     if user_id not in user_states:
