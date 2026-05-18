@@ -1304,6 +1304,8 @@ async def handle_postback(event):
             await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票編號。")]))
             return
 
+        logger.info(f"收到 QR Code 生成請求: 票號 {ticket_no}")
+
         try:
             # 1. 建立靜態檔案目錄
             static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
@@ -1314,9 +1316,7 @@ async def handle_postback(event):
             
             # 2. 只有當檔案不存在時，才從官方下載 (代下載模式)
             if not os.path.exists(qr_path):
-                # 這裡我們需要一個暫時的 API 實例來下載
                 api = HohsinAPI()
-                # 取得使用者帳密
                 users = load_users()
                 user_info = users.get(user_id, {})
                 hohsin_creds = user_info.get("hohsin", user_info)
@@ -1324,34 +1324,38 @@ async def handle_postback(event):
                 password = hohsin_creds.get("password")
                 
                 if await api.login(phone, password):
-                    # 獲取官方圖片 (etc/QRCode/10)
                     official_url = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
                     resp = await api.client.get(official_url)
                     if resp.status_code == 200:
                         with open(qr_path, "wb") as f:
                             f.write(resp.content)
+                        logger.info(f"成功下載官方圖片: {qr_path}")
                     await api.close()
                 else:
                     await api.close()
-                    raise Exception("下載時登入失敗")
+                    raise Exception("登入和欣失敗，請確認帳密設定")
 
             # 3. 構造本地可存取的網址
             base_url = "https://my-hohsin-bot.duckdns.org"
-            image_url = f"{base_url}/static/qrcodes/{qr_filename}"
+            # 加上隨機參數防止 LINE 快取舊圖
+            image_url = f"{base_url}/static/qrcodes/{qr_filename}?t={int(datetime.now().timestamp())}"
             
             from linebot.v3.messaging import ImageMessage
             
-            # 發送本地儲存的官方原廠圖片
-            await line_bot_api.reply_message(ReplyMessageRequest(
-                reply_token=event.reply_token,
+            # 使用 push_message 確保穩定發送 (reply_token 可能因為下載圖片太久而失效)
+            await line_bot_api.push_message(PushMessageRequest(
+                to=user_id,
                 messages=[
-                    TextMessage(text=f"✅ 已成功下載【和欣官方】原廠電子車票\n車票編號：{ticket_no}"),
+                    TextMessage(text=f"✅ 已成功抓取【和欣官方】原廠電子車票\n車票編號：{ticket_no}"),
                     ImageMessage(original_content_url=image_url, preview_image_url=image_url)
                 ]
             ))
         except Exception as e:
             logger.error(f"獲取官方圖片失敗: {e}")
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]))
+            await line_bot_api.push_message(PushMessageRequest(
+                to=user_id,
+                messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]
+            ))
         return
 
     if user_id not in user_states:
