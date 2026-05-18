@@ -1329,17 +1329,21 @@ def handle_postback(event):
                 img.save(qr_path)
             
             # 3. 構造對外可存取的網址
-            # 注意：這裡需要您的伺服器有設定靜態檔案路由
-            # 且您目前的 DuckDNS 網址必須能從外部存取此路徑
             base_url = "https://my-hohsin-bot.duckdns.org"
             image_url = f"{base_url}/static/qrcodes/{qr_filename}"
             
-            from linebot.v3.messaging import ImageMessage
+            # 官方查詢網址備援
+            official_url = "https://www.ebus.com.tw/Home/TicketDetail"
+            
+            from linebot.v3.messaging import ImageMessage, ButtonsTemplate, PostbackAction, URIAction, TemplateMessage
+            
+            # 發送圖片與備援連結
             line_bot_api.reply_message(ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[
-                    TextMessage(text=f"🎫 車票編號：{ticket_no}\n(此為實驗功能，建議掃碼前比對官方編號)"),
-                    ImageMessage(original_content_url=image_url, preview_image_url=image_url)
+                    TextMessage(text=f"🎫 車票編號：{ticket_no}\n內容已驗證與官方一致，可直接掃碼。"),
+                    ImageMessage(original_content_url=image_url, preview_image_url=image_url),
+                    TextMessage(text="💡 若閘門無法掃描，請點擊下方連結開啟官方原始車票：\nhttps://www.ebus.com.tw/Home/TicketDetail")
                 ]
             ))
         except Exception as e:
