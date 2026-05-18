@@ -243,6 +243,34 @@ class HohsinAPI:
         response.raise_for_status()
         return response.json()
 
+    async def get_ticket_detail(self, ticket_id: int) -> Dict[str, Any]:
+        """獲取特定車票的詳細資訊 (包含潛在的 QR Code 資訊)。"""
+        url = f"{self.BASE_URL}/web/tickets/{ticket_id}"
+        response = await self.client.get(url)
+        if response.status_code == 200:
+            return response.json().get("result", {})
+        return {}
+
+    async def get_my_orders(self) -> List[Dict[str, Any]]:
+        """獲取目前登入使用者的訂單列表。"""
+        if not self.access_token:
+            raise ValueError("執行此操作前必須先登入。")
+            
+        # 嘗試路徑清單
+        paths = ["web/orders", "web/orders/upcoming", "web/members/orders"]
+        
+        for path in paths:
+            url = f"{self.BASE_URL}/{path}"
+            logger.info(f"嘗試抓取訂單路徑: {url}")
+            response = await self.client.get(url)
+            
+            if response.status_code == 200:
+                data = response.json()
+                items = data.get("result", {}).get("items", [])
+                if items: return items
+        
+        return []
+
     async def close(self):
         """關閉 HTTP 客戶端。"""
         await self.client.aclose()

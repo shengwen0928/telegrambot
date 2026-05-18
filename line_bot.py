@@ -723,12 +723,96 @@ async def recover_all_tasks():
 
     logger.info("所有任務恢復指令已發出。")
 
+async def handle_my_tickets(user_id: str, reply_token: str):
+    """獲取並顯示使用者的最近車票。"""
+    users = load_users()
+    if user_id not in users:
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text="請先點擊『開始搶票』並完成一次查詢，讓系統記錄您的帳號。")]
+        ))
+        return
+
+    user_info = users[user_id]
+    api = HohsinAPI()
+    try:
+        if await api.login(user_info["phone"], user_info["password"]):
+            orders = await api.get_my_orders()
+            if not orders:
+                line_bot_api.reply_message(ReplyMessageRequest(
+                    reply_token=reply_token,
+                    messages=[TextMessage(text="📭 您目前沒有進行中的訂單。")]
+                ))
+                return
+
+            # 只顯示前 10 筆已付款且未搭乘的票
+            ticket_bubbles = []
+            for order in orders[:5]:
+                for t in order.get("tickets", []):
+                    # 過濾出有效的票 (含付款、取票、驗票中)
+                    status = t.get("xActionDescription", "")
+                    if any(x in status for x in ["付款", "取票", "驗票"]):
+                        departure = t.get("intoStationDepartureTime", "").replace("T", " ")
+                        bubble = {
+                            "type": "bubble",
+                            "size": "mega",
+                            "header": {
+                                "type": "box", "layout": "vertical", "contents": [
+                                    {"type": "text", "text": "🎫 和欣客運 電子車票", "weight": "bold", "color": "#FFFFFF", "size": "sm"}
+                                ], "backgroundColor": "#00B900"
+                            },
+                            "body": {
+                                "type": "box", "layout": "vertical", "contents": [
+                                    {"type": "text", "text": f"{t.get('intoStationOperatingName')} → {t.get('outofStationOperatingName')}", "weight": "bold", "size": "xl"},
+                                    {"type": "text", "text": f"時間：{departure}", "size": "sm", "color": "#666666", "margin": "md"},
+                                    {"type": "text", "text": f"座號：{t.get('seatNo')} 號 ({t.get('cabinLevel')})", "size": "sm", "color": "#666666"},
+                                    {"type": "separator", "margin": "lg"},
+                                    {"type": "text", "text": f"車票編號：{t.get('ticketNo')}", "size": "xs", "color": "#999999", "margin": "md"}
+                                ]
+                            },
+                            "footer": {
+                                "type": "box", "layout": "vertical", "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "postback",
+                                            "label": "顯示 QR Code (實驗中)",
+                                            "data": f"action=show_qrcode&ticket_no={t.get('ticketNo')}"
+                                        },
+                                        "style": "primary", "color": "#00B900"
+                                    }
+                                ]
+                            }
+                        }
+                        ticket_bubbles.append(bubble)
+
+            if not ticket_bubbles:
+                line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="找不到已付款的有效車票。")]))
+            else:
+                carousel = {"type": "carousel", "contents": ticket_bubbles[:10]}
+                line_bot_api.reply_message(ReplyMessageRequest(
+                    reply_token=reply_token,
+                    messages=[FlexMessage(alt_text="您的車票列表", contents=carousel)]
+                ))
+        else:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="和欣登入失敗，請檢查帳密設定。")]))
+    except Exception as e:
+        logger.error(f"獲取車票發生錯誤: {e}")
+        line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=f"系統錯誤：{str(e)}")]))
+    finally:
+        await api.close()
+
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     user_id = event.source.user_id
     text = event.message.text.strip()
     logger.info(f"收到來自 {user_id} 的訊息: {text}")
     
+    # 2. 查詢車票指令
+    if text in ["我的車票", "查詢車票", "ticket", "Ticket"]:
+        asyncio.create_task(handle_my_tickets(user_id, event.reply_token))
+        return
+
     # 初始化狀態
     if user_id not in user_states:
         user_states[user_id] = {"step": States.IDLE}
