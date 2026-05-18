@@ -734,9 +734,21 @@ async def handle_my_tickets(user_id: str, reply_token: str):
         return
 
     user_info = users[user_id]
+    # 修正：根據實例結構，帳密可能存在 'hohsin' 鍵值下或直接在 user_info 下
+    hohsin_creds = user_info.get("hohsin", user_info)
+    phone = hohsin_creds.get("phone") or hohsin_creds.get("username")
+    password = hohsin_creds.get("password")
+
+    if not phone or not password:
+        line_bot_api.reply_message(ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text="找不到您的和欣帳密。請先執行『開始搶票』並選擇和欣來輸入帳號。")]
+        ))
+        return
+
     api = HohsinAPI()
     try:
-        if await api.login(user_info["phone"], user_info["password"]):
+        if await api.login(phone, password):
             orders = await api.get_my_orders()
             if not orders:
                 line_bot_api.reply_message(ReplyMessageRequest(
@@ -1273,8 +1285,57 @@ def handle_message(event):
 
 @handler.add(PostbackEvent)
 def handle_postback(event):
-    """處理 LINE Date Picker 回傳的資料 (全卡片化)"""
+    """處理 LINE Postback 事件 (包含日期選擇與 QR Code 生成)"""
     user_id = event.source.user_id
+    data = event.postback.data
+    
+    # 處理 QR Code 生成請求
+    if data.startswith("action=show_qrcode"):
+        import qrcode
+        from urllib.parse import parse_qs
+        params = parse_qs(data)
+        ticket_no = params.get("ticket_no", [None])[0]
+        
+        if not ticket_no:
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票編號。")]))
+            return
+
+        try:
+            # 1. 建立靜態檔案目錄 (如果不存在)
+            static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
+            os.makedirs(static_dir, exist_ok=True)
+            
+            # 2. 生成 QR Code
+            qr_filename = f"{ticket_no}.png"
+            qr_path = os.path.join(static_dir, qr_filename)
+            
+            # 只有當檔案不存在時才生成，節省資源
+            if not os.path.exists(qr_path):
+                qr = qrcode.QRCode(version=1, box_size=10, border=5)
+                qr.add_data(ticket_no)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
+                img.save(qr_path)
+            
+            # 3. 構造對外可存取的網址
+            # 注意：這裡需要您的伺服器有設定靜態檔案路由
+            # 且您目前的 DuckDNS 網址必須能從外部存取此路徑
+            base_url = "https://my-hohsin-bot.duckdns.org"
+            image_url = f"{base_url}/static/qrcodes/{qr_filename}"
+            
+            from linebot.v3.messaging import ImageMessage
+            line_bot_api.reply_message(ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(text=f"🎫 車票編號：{ticket_no}\n(此為實驗功能，建議掃碼前比對官方編號)"),
+                    ImageMessage(original_content_url=image_url, preview_image_url=image_url)
+                ]
+            ))
+        except Exception as e:
+            logger.error(f"生成 QR Code 失敗: {e}")
+            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 生成失敗：{str(e)}")]))
+        return
+
     if user_id not in user_states:
         return
         
