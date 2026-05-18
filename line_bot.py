@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, HTTPException
-from linebot.v3 import AsyncWebhookHandler
+from linebot.v3.webhook import AsyncWebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     Configuration,
