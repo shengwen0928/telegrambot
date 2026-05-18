@@ -131,8 +131,40 @@ def create_success_card(text: str):
     }
     return FlexMessage(alt_text="🎊 搶票成功通知", contents=FlexContainer.from_dict(card))
 
-# 全域狀態管理
-LINE_QUOTA_EXHAUSTED = False # 當偵測到 429 時會設為 True
+# --- 訊息安全發送層 (解決 429 熔斷問題) ---
+
+async def safe_reply(reply_token: str, messages: list, user_id: str = None):
+    """具備熔斷保護的回覆函式"""
+    global LINE_QUOTA_EXHAUSTED
+    if LINE_QUOTA_EXHAUSTED:
+        logger.warning(f"[熔斷中] 拒絕向 {user_id} 發送回覆訊息")
+        return
+    
+    try:
+        await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+    except Exception as e:
+        if "429" in str(e) or "limit" in str(e).lower():
+            LINE_QUOTA_EXHAUSTED = True
+            logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+        else:
+            logger.error(f"Reply 失敗: {e}")
+
+async def safe_push(user_id: str, messages: list):
+    """具備熔斷保護的推播函式"""
+    global LINE_QUOTA_EXHAUSTED
+    if LINE_QUOTA_EXHAUSTED:
+        logger.warning(f"[熔斷中] 拒絕向 {user_id} 發送推播訊息")
+        return
+    
+    try:
+        client = line_bot_api_notify if line_bot_api_notify else line_bot_api
+        await client.push_message(PushMessageRequest(to=user_id, messages=messages))
+    except Exception as e:
+        if "429" in str(e) or "limit" in str(e).lower():
+            LINE_QUOTA_EXHAUSTED = True
+            logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+        else:
+            logger.error(f"Push 失敗: {e}")
 
 class LineNotifier:
     """專門為 LINE 打造的通知模組"""
@@ -140,37 +172,16 @@ class LineNotifier:
         self.user_id = user_id
 
     async def send_message(self, text: str):
-        """非同步發送訊息 (自動辨識成功訊息並轉為卡片)"""
-        global LINE_QUOTA_EXHAUSTED
-        if LINE_QUOTA_EXHAUSTED:
-            logger.warning(f"LINE 配額已熔斷，停止發送通知給 {self.user_id}: {text}")
-            return
-
-        try:
-            if "🎉 搶票成功" in text:
-                msg = create_success_card(text)
-            else:
-                title = "⚠️ 系統通知" if "❌" in text or "⚠️" in text else "📢 狀態更新"
-                color = DANGER_COLOR if "❌" in text or "⚠️" in text else THEME_COLOR
-                card_dict = create_base_flex_card(title, [{"type": "text", "text": text, "wrap": True, "size": "sm"}])
-                card_dict["header"]["backgroundColor"] = color
-                msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(card_dict))
-
-            req = PushMessageRequest(to=self.user_id, messages=[msg])
-            client = line_bot_api_notify if line_bot_api_notify else line_bot_api
-            await client.push_message(req)
-        except Exception as e:
-            error_str = str(e)
-            if "monthly limit" in error_str or "429" in error_str:
-                LINE_QUOTA_EXHAUSTED = True
-                logger.error(f"!!! 偵測到 LINE API 配額耗盡，啟動全域熔斷 !!!")
-                return
-            
-            logger.error(f"LINE 推播失敗: {e}")
-            try:
-                await line_bot_api.push_message(PushMessageRequest(to=self.user_id, messages=[TextMessage(text=text)]))
-            except:
-                pass
+        if "🎉 搶票成功" in text:
+            msg = create_success_card(text)
+        else:
+            title = "⚠️ 系統通知" if "❌" in text or "⚠️" in text else "📢 狀態更新"
+            color = DANGER_COLOR if "❌" in text or "⚠️" in text else THEME_COLOR
+            card_dict = create_base_flex_card(title, [{"type": "text", "text": text, "wrap": True, "size": "sm"}])
+            card_dict["header"]["backgroundColor"] = color
+            msg = FlexMessage(alt_text=title, contents=FlexContainer.from_dict(card_dict))
+        
+        await safe_push(self.user_id, [msg])
 
 # 簡單的記憶體狀態管理 (Production 建議改用 Redis)
 # 結構: { "user_id": {"step": "waiting_for_from", "bus": "hohsin", ...} }
@@ -846,7 +857,7 @@ def handle_message(event):
         # 1. 啟動指令
         if text in ["搶票", "/start", "開始"]:
             state["step"] = States.WAITING_FOR_BUS
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_bus_card()]))
+            await safe_reply(event.reply_token, [create_bus_card()]))
             return
 
         # 1.5 查詢/取消任務
@@ -854,9 +865,9 @@ def handle_message(event):
             tasks = running_tasks.get(user_id, [])
             if not tasks:
                 reply = FlexMessage(alt_text="無進行中任務", contents=FlexContainer.from_dict(create_base_flex_card("📡 任務管理", [{"type": "text", "text": "您目前沒有正在執行的搶票任務。", "size": "sm"}])))
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+                await safe_reply(event.reply_token, [reply], user_id)
                 return
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_task_list_carousel(tasks)]))
+            await safe_reply(event.reply_token, [create_task_list_carousel(tasks)]))
             return
 
         # 1.6 發起取消確認
@@ -873,9 +884,9 @@ def handle_message(event):
                     text=f"⚠️ 您確定要「停止」此監控任務嗎？\n\n{info_text}",
                     quick_reply=create_confirm_cancel_quick_reply(idx)
                 )
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[confirm_msg]))
+                await safe_reply(event.reply_token, [confirm_msg]))
             else:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 找不到該任務，可能已被系統自動終止。")]))
+                await safe_reply(event.reply_token, [TextMessage(text="❌ 找不到該任務，可能已被系統自動終止。")]))
             return
 
         # 1.7 執行最終取消
@@ -889,13 +900,13 @@ def handle_message(event):
                 from_name = get_station_name(m.from_station, bus_type)
                 to_name = get_station_name(m.to_station, bus_type)
                 reply = FlexMessage(alt_text="任務已停止", contents=FlexContainer.from_dict(create_base_flex_card("🛑 停止成功", [{"type": "text", "text": f"已成功停止：\n{m.travel_date} {from_name}➡️{to_name}", "wrap": True, "size": "sm"}])))
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
+                await safe_reply(event.reply_token, [reply], user_id)
             else:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="⚠️ 停止失敗：找不到該任務，可能已由系統完成或已手動移除。")]))
+                await safe_reply(event.reply_token, [TextMessage(text="⚠️ 停止失敗：找不到該任務，可能已由系統完成或已手動移除。")]))
             return
 
         if text == "確認取消:否":
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="👌 好的，監控將繼續執行！")]))
+            await safe_reply(event.reply_token, [TextMessage(text="👌 好的，監控將繼續執行！")]))
             return
 
         # 2. 選擇業者
@@ -908,10 +919,10 @@ def handle_message(event):
                 state["step"] = States.WAITING_FOR_CREDENTIAL_CHOICE
                 stored_id = users[user_id][bus_type].get("phone") or users[user_id][bus_type].get("username")
                 masked_id = stored_id[:-4] + "****" if stored_id and len(stored_id) >= 4 else "****"
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card(bus_name, masked_id)]))
+                await safe_reply(event.reply_token, [create_login_hint_card(bus_name, masked_id)]))
             else:
                 state["step"] = States.WAITING_FOR_PHONE if bus_type == "hohsin" else States.WAITING_FOR_TRA_ID
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_login_hint_card(bus_name)]))
+                await safe_reply(event.reply_token, [create_login_hint_card(bus_name)]))
             return
 
         # 2.1 選擇是否使用儲存帳密
@@ -923,12 +934,12 @@ def handle_message(event):
                 state["password"] = creds["password"]
                 state["step"] = States.WAITING_FOR_ROUTE_CHOICE
                 favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(bool(favs))]))
+                await safe_reply(event.reply_token, [create_route_choice_card(bool(favs))]))
             else:
                 state["step"] = States.WAITING_FOR_PHONE if bus_type == "hohsin" else States.WAITING_FOR_TRA_ID
                 label = "和欣手機" if bus_type == "hohsin" else "身分證字號"
                 contents = [{"type": "text", "text": f"請輸入新的【{label}】：", "size": "sm"}]
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="重新輸入", contents=FlexContainer.from_dict(create_base_flex_card("🔒 帳號重設", contents)))]))
+                await safe_reply(event.reply_token, [FlexMessage(alt_text="重新輸入", contents=FlexContainer.from_dict(create_base_flex_card("🔒 帳號重設", contents)))]))
             return
 
         # 2.2 輸入手機 (和欣)
@@ -936,7 +947,7 @@ def handle_message(event):
             state["phone"] = text
             state["step"] = States.WAITING_FOR_PASSWORD
             contents = [{"type": "text", "text": f"📱 手機：{text}\n\n請輸入【和欣客運密碼】：", "wrap": True, "size": "sm"}]
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 密碼設定", contents)))]))
+            await safe_reply(event.reply_token, [FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 密碼設定", contents)))]))
             return
 
         # 2.2.1 輸入身分證 (台鐵)
@@ -944,7 +955,7 @@ def handle_message(event):
             state["phone"] = text.upper() # 台鐵身分證轉大寫
             state["step"] = States.WAITING_FOR_TRA_PASSWORD
             contents = [{"type": "text", "text": f"🆔 身分證：{state['phone']}\n\n請輸入【台鐵會員密碼】：", "wrap": True, "size": "sm"}]
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 鐵路密碼", contents)))]))
+            await safe_reply(event.reply_token, [FlexMessage(alt_text="輸入密碼", contents=FlexContainer.from_dict(create_base_flex_card("🔒 鐵路密碼", contents)))]))
             return
 
         # 2.3 輸入密碼 (通用處理)
@@ -956,7 +967,7 @@ def handle_message(event):
                 {"type": "button", "action": {"type": "message", "label": "💾 是，記住帳密", "text": "記憶:是"}, "style": "primary", "color": THEME_COLOR},
                 {"type": "button", "action": {"type": "message", "label": "❌ 否，不要記住", "text": "記憶:否"}, "style": "link", "color": "#666666"}
             ]
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="記憶選擇", contents=FlexContainer.from_dict(create_base_flex_card("💾 隱私設定", contents, footer)))]))
+            await safe_reply(event.reply_token, [FlexMessage(alt_text="記憶選擇", contents=FlexContainer.from_dict(create_base_flex_card("💾 隱私設定", contents, footer)))]))
             return
 
         # 2.4 選擇是否儲存
@@ -969,7 +980,7 @@ def handle_message(event):
                 save_users(users)
             state["step"] = States.WAITING_FOR_ROUTE_CHOICE
             favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(bool(favs))]))
+            await safe_reply(event.reply_token, [create_route_choice_card(bool(favs))]))
             return
 
         # 2.5 選擇路線方式
@@ -978,20 +989,20 @@ def handle_message(event):
             if text == "路線:常用":
                 favs = users.get(user_id, {}).get(f"favorites_{bus_type}", [])
                 if not favs:
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(False)]))
+                    await safe_reply(event.reply_token, [create_route_choice_card(False)]))
                 else:
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_favorites_carousel(favs)]))
+                    await safe_reply(event.reply_token, [create_favorites_carousel(favs)]))
                 return
             elif text == "路線:全新":
                 state["step"] = States.WAITING_FOR_FROM
                 if bus_type == "hohsin":
                     await init_stations()
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "上車")]))
+                    await safe_reply(event.reply_token, [create_stations_carousel(STATIONS_CACHE, "上車")]))
                 else:
                     # 台鐵車站選擇：將字典轉為 list
                     tr_list = [{"id": k, "operatingName": v} for k, v in TR_STATIONS.items()]
                     # 只取前面比較熱門的幾張卡片
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(tr_list, "上車")]))
+                    await safe_reply(event.reply_token, [create_stations_carousel(tr_list, "上車")]))
                 return
 
         # 2.6 選擇常用路線
@@ -1007,7 +1018,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)),
                 quick_reply=create_date_picker_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 2.7 刪除常用路線
@@ -1022,13 +1033,13 @@ def handle_message(event):
             else:
                 msg = "❌ 刪除失敗，找不到該路線。"
             
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=msg)]))
+            await safe_reply(event.reply_token, [TextMessage(text=msg)]))
             # 重新顯示常用清單
             favs = users.get(user_id, {}).get(fav_key, [])
             if not favs:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_route_choice_card(False)]))
+                await safe_reply(event.reply_token, [create_route_choice_card(False)]))
             else:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_favorites_carousel(favs)]))
+                await safe_reply(event.reply_token, [create_favorites_carousel(favs)]))
             return
 
         # 3. 選擇上車站
@@ -1038,10 +1049,10 @@ def handle_message(event):
             state.update({"from_stn": stn_id, "from_stn_name": get_station_name(stn_id, bus_type), "is_favorite_route": False, "step": States.WAITING_FOR_TO})
             
             if bus_type == "hohsin":
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(STATIONS_CACHE, "下車")]))
+                await safe_reply(event.reply_token, [create_stations_carousel(STATIONS_CACHE, "下車")]))
             else:
                 tr_list = [{"id": k, "operatingName": v} for k, v in TR_STATIONS.items()]
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[create_stations_carousel(tr_list, "下車")]))
+                await safe_reply(event.reply_token, [create_stations_carousel(tr_list, "下車")]))
             return
 
         # 4. 選擇下車站
@@ -1056,7 +1067,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("📅 日期設定", contents)),
                 quick_reply=create_date_picker_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 6.1 台鐵：選擇出發時間
@@ -1064,7 +1075,7 @@ def handle_message(event):
             start_t = text.split(":", 1)[1]
             state.update({"start_time": start_t, "step": States.WAITING_FOR_END_TIME})
             card = create_precise_time_carousel("結束", state["date"], min_time=start_t)
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 6.2 台鐵：選擇結束時間
@@ -1081,7 +1092,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
                 quick_reply=create_ticket_count_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 6. 選擇時段 (原和欣流程 -> 改為方案 B 班次選擇 + 班表補完)
@@ -1134,7 +1145,7 @@ def handle_message(event):
                         # 如果真的連參考都抓不到
                         contents = [{"type": "text", "text": f"⚠️ 該時段 ({state['time_range']}) 查無班次資訊。", "wrap": True, "size": "sm"}]
                         footer = [{"type": "button", "action": {"type": "message", "label": "⌨️ 手動輸入精確時間", "text": "班次:手動輸入"}, "style": "primary", "color": THEME_COLOR}]
-                        await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="無班次", contents=FlexContainer.from_dict(create_base_flex_card("🚌 班次提醒", contents, footer)))]))
+                        await safe_reply(event.reply_token, [FlexMessage(alt_text="無班次", contents=FlexContainer.from_dict(create_base_flex_card("🚌 班次提醒", contents, footer)))]))
                         return
 
                     # 4. 建立輪播選單
@@ -1158,11 +1169,11 @@ def handle_message(event):
                         bubbles.append(bubble)
 
                     state["step"] = States.WAITING_FOR_SHIFT
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
+                    await safe_reply(event.reply_token, [FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
 
                 except Exception as e:
                     logger.error(f"獲取完整班次失敗: {e}")
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 查詢發生錯誤: {e}")] ))
+                    await safe_reply(event.reply_token, [TextMessage(text=f"❌ 查詢發生錯誤: {e}")] ))
 
             asyncio.create_task(fetch_full_shifts_and_reply())
             return
@@ -1174,7 +1185,7 @@ def handle_message(event):
             if choice == "手動輸入":
                 state["step"] = States.WAITING_FOR_MANUAL_SHIFT_TIME
                 contents = [{"type": "text", "text": "⌨️ 請輸入您要監控的【精確時間】。\n(例如: 10:15)", "wrap": True, "size": "sm", "weight": "bold"}]
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入時間", contents=FlexContainer.from_dict(create_base_flex_card("⌨️ 時間輸入", contents)))]))
+                await safe_reply(event.reply_token, [FlexMessage(alt_text="輸入時間", contents=FlexContainer.from_dict(create_base_flex_card("⌨️ 時間輸入", contents)))]))
                 return
 
             parts = choice.split("|")
@@ -1196,7 +1207,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
                 quick_reply=create_ticket_count_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 6.4 處理手動班次時間輸入
@@ -1204,7 +1215,7 @@ def handle_message(event):
             # 簡單驗證時間格式 HH:MM
             import re
             if not re.match(r"^\d{2}:\d{2}$", text):
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 格式錯誤，請使用 HH:MM (例如 10:15)")] ))
+                await safe_reply(event.reply_token, [TextMessage(text="❌ 格式錯誤，請使用 HH:MM (例如 10:15)")] ))
                 return
                 
             state.update({
@@ -1220,7 +1231,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("🎫 購票張數", contents)),
                 quick_reply=create_ticket_count_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 7. 選擇張數
@@ -1233,7 +1244,7 @@ def handle_message(event):
                 contents=FlexContainer.from_dict(create_base_flex_card("🤖 選位設定", contents)),
                 quick_reply=create_seat_mode_quick_reply()
             )
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+            await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 8. 選擇選位模式
@@ -1243,11 +1254,11 @@ def handle_message(event):
             else:
                 state["step"] = States.WAITING_FOR_MANUAL_SEATS
                 contents = [{"type": "text", "text": "⌨️ 請於下方輸入您指定的座號。\n(多個請用逗號隔開，例如: 5 或 1,2)", "wrap": True, "size": "sm", "weight": "bold"}]
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="輸入座號", contents=FlexContainer.from_dict(create_base_flex_card("⌨️ 座號輸入", contents)))]))
+                await safe_reply(event.reply_token, [FlexMessage(alt_text="輸入座號", contents=FlexContainer.from_dict(create_base_flex_card("⌨️ 座號輸入", contents)))]))
                 return
 
             if state.get("is_favorite_route"):
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
+                await safe_reply(event.reply_token, [start_monitor_task(user_id, state, users)]))
             else:
                 state["step"] = States.WAITING_FOR_SAVE_ROUTE
                 contents = [{"type": "text", "text": "🤖 已選擇自動選位。\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
@@ -1256,7 +1267,7 @@ def handle_message(event):
                     contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)),
                     quick_reply=create_save_route_quick_reply()
                 )
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+                await safe_reply(event.reply_token, [card], user_id)
             return
 
         # 9. 輸入手動座號
@@ -1265,7 +1276,7 @@ def handle_message(event):
                 seats = [int(s.strip()) for s in text.replace("，", ",").split(",")]
                 state.update({"manual_seats": seats, "seat_mode": "manual"})
                 if state.get("is_favorite_route"):
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
+                    await safe_reply(event.reply_token, [start_monitor_task(user_id, state, users)]))
                 else:
                     state["step"] = States.WAITING_FOR_SAVE_ROUTE
                     contents = [{"type": "text", "text": f"✅ 已指定座位：{seats}\n\n最後，是否將此路線存為常用？", "wrap": True, "size": "sm"}]
@@ -1274,10 +1285,10 @@ def handle_message(event):
                         contents=FlexContainer.from_dict(create_base_flex_card("💾 路線儲存", contents)),
                         quick_reply=create_save_route_quick_reply()
                     )
-                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+                    await safe_reply(event.reply_token, [card], user_id)
             except:
                 contents = [{"type": "text", "text": "❌ 格式錯誤！\n請重新輸入數字（例如: 5 或 1,2）：", "color": DANGER_COLOR, "size": "sm"}]
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[FlexMessage(alt_text="格式錯誤", contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 輸入錯誤", contents)))]))
+                await safe_reply(event.reply_token, [FlexMessage(alt_text="格式錯誤", contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 輸入錯誤", contents)))]))
             return
 
         # 10. 儲存常用路線並啟動監控
@@ -1290,7 +1301,7 @@ def handle_message(event):
                 if not any(f["from"] == state["from_stn"] and f["to"] == state["to_stn"] for f in users[user_id][fav_key]):
                     users[user_id][fav_key].append({"from": state["from_stn"], "to": state["to_stn"], "name": f"{state['from_stn_name']}-{state['to_stn_name']}"})
                     save_users(users)
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[start_monitor_task(user_id, state, users)]))
+            await safe_reply(event.reply_token, [start_monitor_task(user_id, state, users)]))
             return
 
     # 正式排程執行非同步邏輯
@@ -1312,20 +1323,19 @@ def handle_postback(event):
             ticket_id = params.get("ticket_id", [None])[0]
             
             if not ticket_no or not ticket_id:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票資訊。")]))
+                await safe_reply(event.reply_token, [TextMessage(text="❌ 無法獲取車票資訊。")], user_id)
                 return
 
             logger.info(f"收到 QR Code 生成請求: 票號 {ticket_no}, ID {ticket_id}")
 
             try:
-                # 1. 建立靜態檔案目錄
                 static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
                 os.makedirs(static_dir, exist_ok=True)
                 
                 qr_filename = f"official_{ticket_no}.png"
                 qr_path = os.path.join(static_dir, qr_filename)
                 
-                # 2. 執行多層 Fallback 獲取邏輯
+                is_official = False
                 if not os.path.exists(qr_path):
                     api = HohsinAPI()
                     users = load_users()
@@ -1335,81 +1345,62 @@ def handle_postback(event):
                     password = hohsin_creds.get("password")
                     
                     if await api.login(phone, password):
-                        # 使用新開發的「韌性獲取」方法
                         qr_bytes = await api.get_resilient_qrcode(int(ticket_id))
                         if qr_bytes:
-                            with open(qr_path, "wb") as f:
-                                f.write(qr_bytes)
-                            logger.info(f"成功透過韌性邏輯獲取圖片: {qr_path}")
+                            with open(qr_path, "wb") as f: f.write(qr_bytes)
+                            is_official = True
                         else:
-                            # 如果韌性獲取也失敗，最後一招：回退到 etc/QRCode/10 (儘管不穩定)
-                            logger.warning("韌性獲取失敗，嘗試最後一招 etc/QRCode/10")
                             url_legacy = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
                             resp = await api.client.get(url_legacy)
                             if resp.status_code == 200:
-                                with open(qr_path, "wb") as f:
-                                    f.write(resp.content)
+                                with open(qr_path, "wb") as f: f.write(resp.content)
+                                is_official = True
+                            else:
+                                # 自製保底
+                                import qrcode
+                                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=2)
+                                qr.add_data(ticket_no)
+                                qr.make(fit=True)
+                                img = qr.make_image(fill_color="black", back_color="white")
+                                img.save(qr_path)
                         await api.close()
                     else:
                         await api.close()
-                        raise Exception("登入和欣失敗，請確認帳密設定")
+                        raise Exception("登入失敗")
 
-                # 3. 構造網址並發送
                 base_url = "https://my-hohsin-bot.duckdns.org"
                 image_url = f"{base_url}/static/qrcodes/{qr_filename}?t={int(datetime.now().timestamp())}"
-                
-                from linebot.v3.messaging import ImageMessage
-                
-                await line_bot_api.push_message(PushMessageRequest(
-                    to=user_id,
-                    messages=[
-                        TextMessage(text=f"✅ 已成功抓取【和欣官方】車票 QR Code\n車票編號：{ticket_no}"),
-                        ImageMessage(original_content_url=image_url, preview_image_url=image_url)
-                    ]
-                ))
+                status_text = "✅ 成功抓取官方圖檔" if is_official else "⚠️ 官方維護中，提供保底 QR Code"
+                await safe_push(user_id, [
+                    TextMessage(text=f"{status_text}\n編號：{ticket_no}"),
+                    ImageMessage(original_content_url=image_url, preview_image_url=image_url)
+                ])
             except Exception as e:
-                logger.error(f"獲取 QR Code 失敗: {e}")
-                await line_bot_api.push_message(PushMessageRequest(
-                    to=user_id,
-                    messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]
-                ))
+                logger.error(f"QR 失敗: {e}")
+                await safe_push(user_id, [TextMessage(text=f"❌ 獲取失敗：{str(e)}")])
             return
 
-        if user_id not in user_states:
-            return
-            
+        if user_id not in user_states: return
         state = user_states[user_id]
         
-        # 5. 處理日期選擇
         if state["step"] == States.WAITING_FOR_DATE and event.postback.data == "action=select_date":
-            selected_date = event.postback.params['date'] # 格式 YYYY-MM-DD
+            selected_date = event.postback.params['date']
             state["date"] = selected_date
             bus_type = state.get("bus", "hohsin")
-
             if bus_type == "tra":
-                state["step"] = States.WAITING_FOR_START_TIME
                 card = create_precise_time_carousel("出發", selected_date)
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+                await safe_reply(event.reply_token, [card], user_id)
             else:
-                state["step"] = "waiting_for_time"
                 times_qr = create_times_quick_reply(selected_date, bus_type)
                 if times_qr:
                     contents = [{"type": "text", "text": f"📅 已選日期：{selected_date}\n\n最後一步，請選擇乘車時段：", "wrap": True, "size": "sm"}]
-                    card = FlexMessage(
-                        alt_text="選擇時段", 
-                        contents=FlexContainer.from_dict(create_base_flex_card("⏰ 時段設定", contents)),
-                        quick_reply=times_qr
-                    )
+                    card = FlexMessage(alt_text="選擇時段", contents=FlexContainer.from_dict(create_base_flex_card("⏰ 時段設定", contents)), quick_reply=times_qr)
                 else:
-                    state["step"] = States.WAITING_FOR_DATE
-                    contents = [{"type": "text", "text": f"📅 日期：{selected_date}\n⚠️ 抱歉，該日期的時段皆已截止，請選擇其他日期。", "wrap": True, "size": "sm", "color": DANGER_COLOR}]
-                    card = FlexMessage(
-                        alt_text="時段已截止", 
-                        contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)),
-                        quick_reply=create_date_picker_quick_reply()
-                    )
+                    contents = [{"type": "text", "text": f"📅 日期：{selected_date}\n⚠️ 時段皆已截止。", "wrap": True, "size": "sm", "color": DANGER_COLOR}]
+                    card = FlexMessage(alt_text="無可用時段", contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)), quick_reply=create_date_picker_quick_reply())
+                await safe_reply(event.reply_token, [card], user_id)
 
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[card]))
+    asyncio.create_task(process_postback())
 
     # 排程執行
     asyncio.create_task(process_postback())

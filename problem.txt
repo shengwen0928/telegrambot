@@ -1,46 +1,42 @@
 (venv) admin@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
-2026-05-18 07:44:09,132 - LineBot - INFO - 備援通知機器人已就緒。
-INFO:     Started server process [31056]
+2026-05-18 10:32:24,573 - LineBot - INFO - 備援通知機器人已就緒。
+INFO:     Started server process [42754]
 INFO:     Waiting for application startup.
-2026-05-18 07:44:11,356 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-18 07:44:11,357 - LineBot - INFO - LINE Bot 伺服器已啟動！
+2026-05-18 10:32:25,923 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-18 10:32:25,924 - LineBot - INFO - LINE Bot 伺服器已啟動！
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-INFO:     45.148.10.67:0 - "GET / HTTP/1.0" 404 Not Found
-INFO:     184.105.247.252:0 - "GET /geoserver/web/ HTTP/1.0" 404 Not Found
-INFO:     45.205.1.80:0 - "GET / HTTP/1.0" 404 Not Found
-INFO:     45.205.1.80:0 - "PROPFIND / HTTP/1.0" 404 Not Found
-INFO:     184.105.247.252:0 - "GET /.git/config HTTP/1.0" 404 Not Found
-INFO:     46.151.178.13:0 - "PROPFIND / HTTP/1.0" 404 Not Found
-INFO:     8.231.183.24:0 - "OPTIONS / HTTP/1.0" 404 Not Found
-2026-05-18 08:36:37,356 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
+2026-05-18 10:32:43,290 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-18 08:36:40,425 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-18 08:36:40,931 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-18 08:36:45,133 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-18 08:36:45,493 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-18 08:36:45,494 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders
-2026-05-18 08:36:45,750 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders "HTTP/1.1 404 Not Found"
-2026-05-18 08:36:45,751 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders/upcoming
-2026-05-18 08:36:46,002 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders/upcoming "HTTP/1.1 404 Not Found"
-2026-05-18 08:36:46,003 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/members/orders
-2026-05-18 08:36:46,657 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members/orders "HTTP/1.1 200 OK"
+2026-05-18 10:32:44,875 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-18 10:32:45,634 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-18 10:32:48,124 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-18 10:32:48,485 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-18 10:32:48,486 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders
+2026-05-18 10:32:48,738 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders "HTTP/1.1 404 Not Found"
+2026-05-18 10:32:48,739 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders/upcoming
+2026-05-18 10:32:48,991 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders/upcoming "HTTP/1.1 404 Not Found"
+2026-05-18 10:32:48,992 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/members/orders
+2026-05-18 10:32:49,544 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members/orders "HTTP/1.1 200 OK"
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-18 08:36:55,600 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757
-2026-05-18 08:36:56,823 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-18 08:36:57,330 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-18 08:36:58,489 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-18 08:36:58,851 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-18 08:36:59,106 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
-2026-05-18 08:36:59,276 - LineBot - ERROR - 獲取官方圖片失敗: (429)
+2026-05-18 10:32:53,305 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757, ID 8533429
+2026-05-18 10:32:54,450 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-18 10:32:54,950 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-18 10:32:56,402 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-18 10:32:56,776 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-18 10:32:57,036 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429/qrcode "HTTP/1.1 404 Not Found"
+2026-05-18 10:32:57,292 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429 "HTTP/1.1 404 Not Found"
+2026-05-18 10:32:57,293 - LineBot - WARNING - 韌性獲取失敗，嘗試最後一招 etc/QRCode/10
+2026-05-18 10:32:57,545 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
+2026-05-18 10:32:57,723 - LineBot - ERROR - 獲取 QR Code 失敗: (429)
 Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '2d5ba7fa-fa2c-4580-a5f6-fe200b3942af', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '813f5993-14de-422f-b600-1bc024715b48', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 10:32:57 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 10:32:57 GMT', 'Connection': 'close')>
 HTTP response body: {"message":"You have reached your monthly limit."}
 
-2026-05-18 08:36:59,468 - asyncio - ERROR - Task exception was never retrieved
-future: <Task finished name='Task-28' coro=<handle_postback.<locals>.process_postback() done, defined at /home/admin/telegrambot/line_bot.py:1303> exception=ApiException()>
+2026-05-18 10:32:57,905 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-14' coro=<handle_postback.<locals>.process_postback() done, defined at /home/admin/telegrambot/line_bot.py:1306> exception=ApiException()>
 Traceback (most recent call last):
-  File "/home/admin/telegrambot/line_bot.py", line 1353, in process_postback
+  File "/home/admin/telegrambot/line_bot.py", line 1363, in process_postback
     await line_bot_api.push_message(PushMessageRequest(
   File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
     raise e
@@ -54,14 +50,14 @@ Traceback (most recent call last):
     raise ApiException(http_resp=r)
 linebot.v3.messaging.exceptions.ApiException: (429)
 Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '2d5ba7fa-fa2c-4580-a5f6-fe200b3942af', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '813f5993-14de-422f-b600-1bc024715b48', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 10:32:57 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 10:32:57 GMT', 'Connection': 'close')>
 HTTP response body: {"message":"You have reached your monthly limit."}
 
 
 During handling of the above exception, another exception occurred:
 
 Traceback (most recent call last):
-  File "/home/admin/telegrambot/line_bot.py", line 1362, in process_postback
+  File "/home/admin/telegrambot/line_bot.py", line 1372, in process_postback
     await line_bot_api.push_message(PushMessageRequest(
   File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
     raise e
@@ -75,58 +71,5 @@ Traceback (most recent call last):
     raise ApiException(http_resp=r)
 linebot.v3.messaging.exceptions.ApiException: (429)
 Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': 'c94ba58d-09f7-4f69-80fb-b41efe00a8ab', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:36:59 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:36:59 GMT', 'Connection': 'close')>
-HTTP response body: {"message":"You have reached your monthly limit."}
-
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-18 08:37:16,829 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757
-2026-05-18 08:37:18,135 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-18 08:37:18,639 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-18 08:37:20,063 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-18 08:37:20,440 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-18 08:37:20,694 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
-2026-05-18 08:37:21,018 - LineBot - ERROR - 獲取官方圖片失敗: (429)
-Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '5159878f-e4eb-4b76-abf0-7a1f9c5bdac8', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
-HTTP response body: {"message":"You have reached your monthly limit."}
-
-2026-05-18 08:37:21,197 - asyncio - ERROR - Task exception was never retrieved
-future: <Task finished name='Task-36' coro=<handle_postback.<locals>.process_postback() done, defined at /home/admin/telegrambot/line_bot.py:1303> exception=ApiException()>
-Traceback (most recent call last):
-  File "/home/admin/telegrambot/line_bot.py", line 1353, in process_postback
-    await line_bot_api.push_message(PushMessageRequest(
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
-    raise e
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
-    response_data = await self.request(
-                    ^^^^^^^^^^^^^^^^^^^
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
-    return (await self.request("POST", url,
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
-    raise ApiException(http_resp=r)
-linebot.v3.messaging.exceptions.ApiException: (429)
-Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '5159878f-e4eb-4b76-abf0-7a1f9c5bdac8', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
-HTTP response body: {"message":"You have reached your monthly limit."}
-
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "/home/admin/telegrambot/line_bot.py", line 1362, in process_postback
-    await line_bot_api.push_message(PushMessageRequest(
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 229, in __call_api
-    raise e
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_api_client.py", line 219, in __call_api
-    response_data = await self.request(
-                    ^^^^^^^^^^^^^^^^^^^
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 224, in post_request
-    return (await self.request("POST", url,
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/admin/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/async_rest.py", line 181, in request
-    raise ApiException(http_resp=r)
-linebot.v3.messaging.exceptions.ApiException: (429)
-Reason: Too Many Requests
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '113210f8-6b6e-4ebc-a3a9-befb08c081f5', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 08:37:21 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 08:37:21 GMT', 'Connection': 'close')>
+HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': '17efa33d-8146-40ae-b52e-7500e529d775', 'x-xss-protection': '1; mode=block', 'Content-Length': '50', 'Expires': 'Mon, 18 May 2026 10:32:57 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Mon, 18 May 2026 10:32:57 GMT', 'Connection': 'close')>
 HTTP response body: {"message":"You have reached your monthly limit."}
