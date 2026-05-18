@@ -29,6 +29,7 @@ from linebot.v3.webhooks import (
     PostbackEvent,
     TextMessageContent
 )
+from fastapi.staticfiles import StaticFiles
 
 from src.hohsin_api import HohsinAPI
 from src.monitor import HohsinMonitor
@@ -75,6 +76,10 @@ if not LINE_CHANNEL_SECRET or not LINE_CHANNEL_ACCESS_TOKEN:
 
 # 初始化 FastAPI 與 LINE SDK (主機器人)
 app = FastAPI()
+
+# 修正：掛載靜態檔案目錄，以便提供 QR Code 圖片
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 api_client = ApiClient(configuration)
 line_bot_api = MessagingApi(api_client)
