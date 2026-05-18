@@ -1305,22 +1305,48 @@ def handle_postback(event):
             return
 
         try:
-            # 1. 取得和欣官方原廠圖片網址 (這張圖片是由和欣伺服器產生的)
-            official_image_url = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
+            # 1. 建立靜態檔案目錄
+            static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
+            os.makedirs(static_dir, exist_ok=True)
             
-            # 2. 構造官方查票網頁網址 (帶入票號參數)
-            # 注意：和欣查票頁面通常需要登入 Session，此連結為輔助參考
-            web_view_url = f"https://www.ebus.com.tw/Home/TicketDetail?no={ticket_no}"
+            qr_filename = f"official_{ticket_no}.png"
+            qr_path = os.path.join(static_dir, qr_filename)
+            
+            # 2. 只有當檔案不存在時，才從官方下載 (代下載模式)
+            if not os.path.exists(qr_path):
+                # 這裡我們需要一個暫時的 API 實例來下載
+                api = HohsinAPI()
+                # 取得使用者帳密
+                users = load_users()
+                user_info = users.get(user_id, {})
+                hohsin_creds = user_info.get("hohsin", user_info)
+                phone = hohsin_creds.get("phone") or hohsin_creds.get("username")
+                password = hohsin_creds.get("password")
+                
+                if await api.login(phone, password):
+                    # 獲取官方圖片 (etc/QRCode/10)
+                    official_url = f"https://www.ebus.com.tw/etc/QRCode/10?TicketNo={ticket_no}"
+                    resp = await api.client.get(official_url)
+                    if resp.status_code == 200:
+                        with open(qr_path, "wb") as f:
+                            f.write(resp.content)
+                    await api.close()
+                else:
+                    await api.close()
+                    raise Exception("下載時登入失敗")
+
+            # 3. 構造本地可存取的網址
+            base_url = "https://my-hohsin-bot.duckdns.org"
+            image_url = f"{base_url}/static/qrcodes/{qr_filename}"
             
             from linebot.v3.messaging import ImageMessage
             
-            # 直接發送官方原廠圖片
+            # 發送本地儲存的官方原廠圖片
             line_bot_api.reply_message(ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[
-                    TextMessage(text=f"✅ 已成功抓取【和欣官方】原廠電子車票\n車票編號：{ticket_no}\n(此圖片由和欣伺服器提供，可直接掃碼)"),
-                    ImageMessage(original_content_url=official_image_url, preview_image_url=official_image_url),
-                    TextMessage(text=f"💡 如需查看完整訂單詳情，請至官網查詢。")
+                    TextMessage(text=f"✅ 已成功下載【和欣官方】原廠電子車票\n車票編號：{ticket_no}"),
+                    ImageMessage(original_content_url=image_url, preview_image_url=image_url)
                 ]
             ))
         except Exception as e:
