@@ -180,6 +180,18 @@ class HohsinMonitor:
                 error_data = result.get("error", {})
                 error_msg = error_data.get("message", "未知錯誤")
 
+                # 偵測登入失效：自動重新登入
+                if "did not login" in error_msg.lower() or "未登入" in error_msg:
+                    logger.warning("偵測到登入狀態失效，嘗試重新登入後重試訂票...")
+                    if await self._login_with_retry():
+                        # 重新登入後，立刻再次嘗試訂票
+                        result = await self.api.book_ticket(schedule, selected_seats)
+                        if result.get("success") or result.get("result"):
+                            msg = f"🎉 搶票成功 (重新登入後)！\n日期：{self.travel_date}\n班次：{departure_time}\n張數：{num_tickets}\n座位：{', '.join(map(str, selected_seats))}"
+                            logger.info(msg)
+                            await self.notifier.send_message(msg)
+                            return True
+
                 # 偵測終止性錯誤：重複訂位
                 if "三小時內已有訂單" in error_msg:
                     final_msg = f"🛑 偵測到重複訂位衝突：{error_msg}\n系統將停止此監控任務，請先手動檢查現有訂單。"

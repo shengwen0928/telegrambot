@@ -652,9 +652,11 @@ def start_monitor_task(user_id, state, users):
     async def run_and_cleanup():
         try: await monitor.run()
         finally:
-            if user_id in running_tasks and monitor in running_tasks[user_id]:
-                running_tasks[user_id].remove(monitor)
-                save_tasks_to_file(running_tasks) # 更新檔案
+            # 只有在任務非正在運行（即成功完成或手動停止）時才移除
+            if not monitor.is_running:
+                if user_id in running_tasks and monitor in running_tasks[user_id]:
+                    running_tasks[user_id].remove(monitor)
+                    save_tasks_to_file(running_tasks) # 更新檔案
     
     asyncio.create_task(run_and_cleanup())
     state["step"] = States.IDLE
@@ -701,6 +703,8 @@ async def recover_all_tasks():
                 )
             
             monitor.num_tickets = p.get("num_tickets", 1)
+            monitor.attempt_count = task.get("attempt_count", 0)
+            monitor.last_check_time = task.get("last_check_time")
             
             if user_id not in running_tasks: running_tasks[user_id] = []
             running_tasks[user_id].append(monitor)
@@ -708,9 +712,10 @@ async def recover_all_tasks():
             async def run_and_cleanup_internal(m=monitor, uid=user_id):
                 try: await m.run()
                 finally:
-                    if uid in running_tasks and m in running_tasks[uid]:
-                        running_tasks[uid].remove(m)
-                        save_tasks_to_file(running_tasks)
+                    if not m.is_running:
+                        if uid in running_tasks and m in running_tasks[uid]:
+                            running_tasks[uid].remove(m)
+                            save_tasks_to_file(running_tasks)
 
             asyncio.create_task(run_and_cleanup_internal())
         except Exception as e:
@@ -1231,6 +1236,12 @@ async def startup_event():
     # 恢復之前的任務
     await recover_all_tasks()
     logger.info("LINE Bot 伺服器已啟動！")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("正在關閉伺服器，同步運行中的任務...")
+    save_tasks_to_file(running_tasks)
+    logger.info("任務同步完成。")
 
 if __name__ == "__main__":
     import uvicorn

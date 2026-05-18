@@ -17,6 +17,8 @@ def save_tasks_to_file(running_tasks_dict):
             task_info = {
                 "user_id": user_id,
                 "bus_type": bus_type,
+                "attempt_count": getattr(m, "attempt_count", 0),
+                "last_check_time": getattr(m, "last_check_time", None),
                 "params": {
                     "from_station": m.from_station,
                     "to_station": m.to_station,

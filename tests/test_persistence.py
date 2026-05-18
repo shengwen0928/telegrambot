@@ -29,6 +29,9 @@ class TestPersistence(unittest.TestCase):
             user_password="password",
             notifier=self.notifier
         )
+        monitor.attempt_count = 42
+        monitor.last_check_time = "12:34:56"
+        
         running_tasks = {"user1": [monitor]}
         save_tasks_to_file(running_tasks)
         
@@ -38,6 +41,8 @@ class TestPersistence(unittest.TestCase):
         self.assertEqual(len(loaded), 1)
         self.assertEqual(loaded[0]["user_id"], "user1")
         self.assertEqual(loaded[0]["bus_type"], "hohsin")
+        self.assertEqual(loaded[0]["attempt_count"], 42)
+        self.assertEqual(loaded[0]["last_check_time"], "12:34:56")
         self.assertEqual(loaded[0]["params"]["from_station"], "1")
         self.assertEqual(loaded[0]["params"]["user_phone"], "0912345678")
 

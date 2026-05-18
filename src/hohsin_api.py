@@ -157,6 +157,10 @@ class HohsinAPI:
             })
 
         url = f"{self.BASE_URL}/web/orders/book"
+        # 確保 Header 帶上最新的 access_token
+        self.headers["Authorization"] = f"Bearer {self.access_token}"
+        self.client.headers.update(self.headers)
+
         payload = {
             "dailyScheduleId": schedule["dailyScheduleId"],
             "intoStationId": schedule["intoStationId"],
@@ -164,7 +168,7 @@ class HohsinAPI:
             "returnIntoStationId": "",
             "returnOutofStationId": "",
             "tickets": tickets_payload,
-            "memberId": self.user_info["id"],
+            "memberId": self.user_info.get("id"),
             "passengerName": self.user_info.get("name", "使用者"),
             "passengerIdentityNo": self.user_info.get("identityNo", ""),
             "passengerPhoneNumber": self.user_info.get("phoneNumber", ""),
@@ -182,8 +186,7 @@ class HohsinAPI:
             result_data = {"success": False, "error": {"message": response.text}}
 
         if response.status_code != 200:
-            logger.error(f"訂位 API 失敗: {response.status_code}, 內容: {response.text}")
-            # 如果 API 回傳了標準的錯誤格式，我們直接返回該資料
+            logger.error(f"訂位 API 失敗! 狀態碼: {response.status_code}, 回應: {response.text}")
             return result_data
             
         return result_data
