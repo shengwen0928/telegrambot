@@ -804,7 +804,7 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                 carousel = {"type": "carousel", "contents": ticket_bubbles[:10]}
                 line_bot_api.reply_message(ReplyMessageRequest(
                     reply_token=reply_token,
-                    messages=[FlexMessage(alt_text="您的車票列表", contents=carousel)]
+                    messages=[FlexMessage(alt_text="您的車票列表", contents=FlexContainer.from_dict(carousel))]
                 ))
         else:
             line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="和欣登入失敗，請檢查帳密設定。")]))
