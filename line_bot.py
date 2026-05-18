@@ -1310,13 +1310,18 @@ def handle_postback(event):
             static_dir = os.path.join(os.getcwd(), "static", "qrcodes")
             os.makedirs(static_dir, exist_ok=True)
             
-            # 2. 生成 QR Code
+            # 2. 生成 QR Code (優化等級與容錯)
             qr_filename = f"{ticket_no}.png"
             qr_path = os.path.join(static_dir, qr_filename)
             
-            # 只有當檔案不存在時才生成，節省資源
             if not os.path.exists(qr_path):
-                qr = qrcode.QRCode(version=1, box_size=10, border=5)
+                import qrcode
+                qr = qrcode.QRCode(
+                    version=None, # 自動選擇大小
+                    error_correction=qrcode.constants.ERROR_CORRECT_H, # 最高容錯等級
+                    box_size=10,
+                    border=4
+                )
                 qr.add_data(ticket_no)
                 qr.make(fit=True)
                 img = qr.make_image(fill_color="black", back_color="white")
