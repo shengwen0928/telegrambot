@@ -1289,7 +1289,7 @@ def handle_message(event):
 
 
 @handler.add(PostbackEvent)
-def handle_postback(event):
+async def handle_postback(event):
     """處理 LINE Postback 事件 (包含日期選擇與 QR Code 生成)"""
     user_id = event.source.user_id
     data = event.postback.data
@@ -1301,7 +1301,7 @@ def handle_postback(event):
         ticket_no = params.get("ticket_no", [None])[0]
         
         if not ticket_no:
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票編號。")]))
+            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text="❌ 無法獲取車票編號。")]))
             return
 
         try:
@@ -1342,7 +1342,7 @@ def handle_postback(event):
             from linebot.v3.messaging import ImageMessage
             
             # 發送本地儲存的官方原廠圖片
-            line_bot_api.reply_message(ReplyMessageRequest(
+            await line_bot_api.reply_message(ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text=f"✅ 已成功下載【和欣官方】原廠電子車票\n車票編號：{ticket_no}"),
@@ -1351,7 +1351,7 @@ def handle_postback(event):
             ))
         except Exception as e:
             logger.error(f"獲取官方圖片失敗: {e}")
-            line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]))
+            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[TextMessage(text=f"❌ 獲取失敗：{str(e)}")]))
         return
 
     if user_id not in user_states:
