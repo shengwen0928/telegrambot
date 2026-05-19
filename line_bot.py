@@ -3,6 +3,7 @@ import asyncio
 import logging
 import json
 import pytz
+import httpx
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
@@ -25,6 +26,7 @@ from linebot.v3.messaging import (
     DatetimePickerAction,
     ImageMessage
 )
+from linebot.v3.messaging.exceptions import UnauthorizedException
 from linebot.v3.webhooks import (
     MessageEvent,
     PostbackEvent,
@@ -45,6 +47,8 @@ logger = logging.getLogger("LineBot")
 
 # 全域通知機器人實例預定義，防止 NameError
 line_bot_api_notify = None
+LINE_QUOTA_EXHAUSTED = False
+LINE_TOKEN_REFRESH_LOCK = asyncio.Lock()
 
 USER_DB_FILE = "users.json"
 
@@ -66,14 +70,17 @@ def save_users(data: Dict[str, Dict[str, str]]):
 
 # 讀取環境變數
 load_dotenv()
+LINE_CHANNEL_ID = os.getenv("LINE_CHANNEL_ID")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 # 備援通知機器人 Token
 LINE_NOTIFY_ACCESS_TOKEN = os.getenv("LINE_NOTIFY_ACCESS_TOKEN")
 
-if not LINE_CHANNEL_SECRET or not LINE_CHANNEL_ACCESS_TOKEN:
-    logger.error("錯誤：未設定 LINE_CHANNEL_SECRET 或 LINE_CHANNEL_ACCESS_TOKEN")
+if not LINE_CHANNEL_SECRET or (not LINE_CHANNEL_ACCESS_TOKEN and not LINE_CHANNEL_ID):
+    logger.error("錯誤：未設定 LINE_CHANNEL_SECRET 或 LINE_CHANNEL_ACCESS_TOKEN（或 LINE_CHANNEL_ID）")
     logger.info("這是不影響系統啟動的警告，請在 .env 中補上設定。")
+elif not LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_ID:
+    logger.warning("未設定 LINE_CHANNEL_ACCESS_TOKEN，將在需要時嘗試向 LINE 取得新 token。")
 
 # 初始化 FastAPI 與 LINE SDK (主機器人)
 app = FastAPI()
@@ -133,6 +140,63 @@ def create_success_card(text: str):
 
 # --- 訊息安全發送層 (解決 429 熔斷問題) ---
 
+async def refresh_line_channel_access_token(expected_token: Optional[str] = None) -> bool:
+    """嘗試以 Channel ID/Secret 重新取得 LINE Channel Access Token"""
+    global LINE_CHANNEL_ACCESS_TOKEN, configuration, async_api_client, line_bot_api
+    if not LINE_CHANNEL_ID or not LINE_CHANNEL_SECRET:
+        logger.error("無法刷新 LINE Channel Access Token：缺少 LINE_CHANNEL_ID 或 LINE_CHANNEL_SECRET")
+        return False
+
+    async with LINE_TOKEN_REFRESH_LOCK:
+        if expected_token and LINE_CHANNEL_ACCESS_TOKEN != expected_token:
+            return True
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.line.me/oauth2/v2.1/token",
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": LINE_CHANNEL_ID,
+                        "client_secret": LINE_CHANNEL_SECRET
+                    },
+                    headers={"Content-Type": "application/x-www-form-urlencoded"}
+                )
+        except httpx.HTTPError as e:
+            logger.error(f"刷新 LINE access token 失敗: {e}")
+            return False
+
+        if response.status_code != 200:
+            logger.error(f"刷新 LINE access token 失敗: {response.status_code} {response.text}")
+            return False
+
+        try:
+            payload = response.json()
+        except ValueError as e:
+            logger.error(f"刷新 LINE access token 失敗: 回應解析錯誤 {e}")
+            return False
+
+        new_token = payload.get("access_token")
+        if not new_token:
+            logger.error("刷新 LINE access token 失敗: 回應缺少 access_token")
+            return False
+
+        if new_token == LINE_CHANNEL_ACCESS_TOKEN:
+            return True
+
+        if async_api_client:
+            try:
+                await async_api_client.close()
+            except Exception as e:
+                logger.warning(f"關閉舊 LINE client 失敗: {e}")
+
+        LINE_CHANNEL_ACCESS_TOKEN = new_token
+        configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
+        async_api_client = AsyncApiClient(configuration)
+        line_bot_api = AsyncMessagingApi(async_api_client)
+        logger.info("LINE channel access token 已更新")
+        return True
+
 async def safe_reply(reply_token: str, messages: list, user_id: str = None):
     """具備熔斷保護的回覆函式"""
     global LINE_QUOTA_EXHAUSTED
@@ -142,6 +206,20 @@ async def safe_reply(reply_token: str, messages: list, user_id: str = None):
     
     try:
         await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+    except UnauthorizedException as e:
+        logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
+        current_token = LINE_CHANNEL_ACCESS_TOKEN
+        if await refresh_line_channel_access_token(current_token):
+            try:
+                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+            except Exception as retry_err:
+                if "429" in str(retry_err) or "limit" in str(retry_err).lower():
+                    LINE_QUOTA_EXHAUSTED = True
+                    logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+                else:
+                    logger.error(f"Reply 重試失敗: {retry_err}")
+        else:
+            logger.error("無法刷新 LINE access token，Reply 失敗")
     except Exception as e:
         if "429" in str(e) or "limit" in str(e).lower():
             LINE_QUOTA_EXHAUSTED = True
@@ -159,6 +237,23 @@ async def safe_push(user_id: str, messages: list):
     try:
         client = line_bot_api_notify if line_bot_api_notify else line_bot_api
         await client.push_message(PushMessageRequest(to=user_id, messages=messages))
+    except UnauthorizedException as e:
+        if client is line_bot_api:
+            logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
+            current_token = LINE_CHANNEL_ACCESS_TOKEN
+            if await refresh_line_channel_access_token(current_token):
+                try:
+                    await line_bot_api.push_message(PushMessageRequest(to=user_id, messages=messages))
+                except Exception as retry_err:
+                    if "429" in str(retry_err) or "limit" in str(retry_err).lower():
+                        LINE_QUOTA_EXHAUSTED = True
+                        logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+                    else:
+                        logger.error(f"Push 重試失敗: {retry_err}")
+            else:
+                logger.error("無法刷新 LINE access token，Push 失敗")
+        else:
+            logger.error(f"Push 失敗: {e}")
     except Exception as e:
         if "429" in str(e) or "limit" in str(e).lower():
             LINE_QUOTA_EXHAUSTED = True
@@ -748,10 +843,7 @@ async def handle_my_tickets(user_id: str, reply_token: str):
     """獲取並顯示使用者的最近車票。"""
     users = load_users()
     if user_id not in users:
-        await line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text="請先點擊『開始搶票』並完成一次查詢，讓系統記錄您的帳號。")]
-        ))
+        await safe_reply(reply_token, [TextMessage(text="請先點擊『開始搶票』並完成一次查詢，讓系統記錄您的帳號。")], user_id)
         return
 
     user_info = users[user_id]
@@ -761,10 +853,7 @@ async def handle_my_tickets(user_id: str, reply_token: str):
     password = hohsin_creds.get("password")
 
     if not phone or not password:
-        await line_bot_api.reply_message(ReplyMessageRequest(
-            reply_token=reply_token,
-            messages=[TextMessage(text="找不到您的和欣帳密。請先執行『開始搶票』並選擇和欣來輸入帳號。")]
-        ))
+        await safe_reply(reply_token, [TextMessage(text="找不到您的和欣帳密。請先執行『開始搶票』並選擇和欣來輸入帳號。")], user_id)
         return
 
     api = HohsinAPI()
@@ -772,10 +861,7 @@ async def handle_my_tickets(user_id: str, reply_token: str):
         if await api.login(phone, password):
             orders = await api.get_my_orders()
             if not orders:
-                await line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text="📭 您目前沒有進行中的訂單。")]
-                ))
+                await safe_reply(reply_token, [TextMessage(text="📭 您目前沒有進行中的訂單。")], user_id)
                 return
 
             # 只顯示前 10 筆已付款且未搭乘的票
@@ -820,18 +906,15 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                         ticket_bubbles.append(bubble)
 
             if not ticket_bubbles:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="找不到已付款的有效車票。")]))
+                await safe_reply(reply_token, [TextMessage(text="找不到已付款的有效車票。")], user_id)
             else:
                 carousel = {"type": "carousel", "contents": ticket_bubbles[:10]}
-                await line_bot_api.reply_message(ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[FlexMessage(alt_text="您的車票列表", contents=FlexContainer.from_dict(carousel))]
-                ))
+                await safe_reply(reply_token, [FlexMessage(alt_text="您的車票列表", contents=FlexContainer.from_dict(carousel))], user_id)
         else:
-            await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text="和欣登入失敗，請檢查帳密設定。")]))
+            await safe_reply(reply_token, [TextMessage(text="和欣登入失敗，請檢查帳密設定。")], user_id)
     except Exception as e:
         logger.error(f"獲取車票發生錯誤: {e}")
-        await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=[TextMessage(text=f"系統錯誤：{str(e)}")]))
+        await safe_reply(reply_token, [TextMessage(text=f"系統錯誤：{str(e)}")], user_id)
     finally:
         await api.close()
 
