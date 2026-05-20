@@ -1254,7 +1254,7 @@ def handle_message(event):
                         bubbles.append(bubble)
 
                     state["step"] = States.WAITING_FOR_SHIFT
-                    await safe_reply(event.reply_token, [FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
+                    await safe_reply(event.reply_token, [FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))])
 
                 except Exception as e:
                     logger.error(f"獲取完整班次失敗: {e}")

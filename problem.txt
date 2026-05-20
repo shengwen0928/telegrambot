@@ -1,111 +1,58 @@
 (venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
-2026-05-19 23:47:08,044 - LineBot - INFO - 備援通知機器人已就緒。
-INFO:     Started server process [182794]
-INFO:     Waiting for application startup.
-2026-05-19 23:47:10,724 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-19 23:47:10,728 - LineBot - INFO - LINE Bot 伺服器已啟動！
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-2026-05-19 23:47:26,035 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-19 23:47:45,713 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-19 23:47:51,747 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 查詢
-INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 500 Internal Server Error
-ERROR:    Exception in ASGI application
 Traceback (most recent call last):
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/protocols/http/h11_impl.py", line 415, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/middleware/proxy_headers.py", line 56, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/applications.py", line 1159, in __call__
-    await super().__call__(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/applications.py", line 90, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 186, in __call__
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/errors.py", line 164, in __call__
-    await self.app(scope, receive, _send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/middleware/asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 660, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 680, in app
-    await route.handle(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/routing.py", line 276, in handle
-    await self.app(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 134, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 120, in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 674, in app
-    raw_response = await run_endpoint_function(
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/fastapi/routing.py", line 328, in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 549, in callback
-    handler.handle(body_str, signature)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 242, in handle
-    self.__invoke_func(func, event, payload)
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/webhook.py", line 254, in __invoke_func
-    func(event)
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 745, in handle_message
-    line_bot_api.reply_message(ReplyMessageRequest(reply_token=event.reply_token, messages=[reply]))
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 40, in wrapper_function
-    return vd.call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 134, in call
-    return self.execute(m)
-           ^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 206, in execute
-    return self.raw_function(**d, **var_kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api/messaging_api.py", line 7561, in reply_message
-    return self.reply_message_with_http_info(reply_message_request, **kwargs)  # noqa: E501
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 40, in wrapper_function
-    return vd.call(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 134, in call
-    return self.execute(m)
-           ^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/pydantic/v1/decorator.py", line 206, in execute
-    return self.raw_function(**d, **var_kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api/messaging_api.py", line 7666, in reply_message_with_http_info
-    return self.api_client.call_api(
+  File "/home/ad565198ad56519867/telegrambot/venv/bin/uvicorn", line 8, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api_client.py", line 407, in call_api
-    return self.__call_api(resource_path, method,
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api_client.py", line 222, in __call_api
-    raise e
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api_client.py", line 212, in __call_api
-    response_data = self.request(
-                    ^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/api_client.py", line 451, in request
-    return self.rest_client.post_request(url,
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/rest.py", line 270, in post_request
-    return self.request("POST", url,
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/linebot/v3/messaging/rest.py", line 218, in request
-    raise UnauthorizedException(http_resp=r)
-linebot.v3.messaging.exceptions.UnauthorizedException: (401)
-Reason: Unauthorized
-HTTP response headers: HTTPHeaderDict({'Server': 'legy', 'Content-Type': 'application/json', 'WWW-Authenticate': 'Bearer error="invalid_token", error_description="accessToken expired(2)"', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': 'b65061f5-1844-4b47-a127-30172610f7a0', 'x-xss-protection': '1; mode=block', 'Content-Length': '104', 'Expires': 'Tue, 19 May 2026 23:47:52 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Tue, 19 May 2026 23:47:52 GMT', 'Connection': 'close'})
-HTTP response body: {"message":"Authentication failed. Confirm that the access token in the authorization header is valid."}
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 441, in main
+    run(
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/main.py", line 617, in run
+    server.run()
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/asyncio/base_events.py", line 653, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
+    await self._serve(sockets)
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
+    config.load()
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/config.py", line 449, in load
+    self.loaded_app = import_from_string(self.app)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/ad565198ad56519867/telegrambot/venv/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.11/importlib/__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1206, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1178, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1149, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 936, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1074, in get_code
+  File "<frozen importlib._bootstrap_external>", line 1004, in source_to_code
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 1257
+    await safe_reply(event.reply_token, [FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
+                                                                                                                                                     ^
+SyntaxError: unmatched ')'
