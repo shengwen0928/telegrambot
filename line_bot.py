@@ -1456,13 +1456,7 @@ def handle_postback(event):
                                 with open(qr_path, "wb") as f: f.write(resp.content)
                                 is_official = True
                             else:
-                                # 自製保底
-                                import qrcode
-                                qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=10, border=2)
-                                qr.add_data(ticket_no)
-                                qr.make(fit=True)
-                                img = qr.make_image(fill_color="black", back_color="white")
-                                img.save(qr_path)
+                                raise Exception("官方 QR 暫時無法取得")
                         await api.close()
                     else:
                         await api.close()
@@ -1470,7 +1464,7 @@ def handle_postback(event):
 
                 base_url = "https://my-hohsin-bot.duckdns.org"
                 image_url = f"{base_url}/static/qrcodes/{qr_filename}?t={int(datetime.now().timestamp())}"
-                status_text = "✅ 成功抓取官方圖檔" if is_official else "⚠️ 官方維護中，提供保底 QR Code"
+                status_text = "✅ QR 圖檔已取得"
                 await safe_push(user_id, [
                     TextMessage(text=f"{status_text}\n編號：{ticket_no}"),
                     ImageMessage(original_content_url=image_url, preview_image_url=image_url)

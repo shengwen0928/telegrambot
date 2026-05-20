@@ -1,24 +1,39 @@
 (venv) ad565198ad56519867@instance-20260430-030740:~/telegrambot$ uvicorn line_bot:app --host 0.0.0.0 --port 8000
-2026-05-20 00:29:41,316 - LineBot - INFO - 備援通知機器人已就緒。
-INFO:     Started server process [185588]
+2026-05-20 00:47:44,144 - LineBot - INFO - 備援通知機器人已就緒。
+INFO:     Started server process [186973]
 INFO:     Waiting for application startup.
-2026-05-20 00:29:44,244 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
-2026-05-20 00:29:44,245 - LineBot - INFO - LINE Bot 伺服器已啟動！
+2026-05-20 00:47:45,622 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/stations "HTTP/1.1 200 OK"
+2026-05-20 00:47:45,623 - LineBot - INFO - LINE Bot 伺服器已啟動！
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-2026-05-20 00:30:10,886 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
+2026-05-20 00:48:25,626 - LineBot - INFO - 收到來自 U2425ba2e38965286eec945fd9fa31839 的訊息: 我的車票
 INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
-2026-05-20 00:30:12,369 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
-2026-05-20 00:30:12,880 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
-2026-05-20 00:30:15,769 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
-2026-05-20 00:30:16,145 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
-2026-05-20 00:30:16,146 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders
-2026-05-20 00:30:16,403 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders "HTTP/1.1 404 Not Found"
-2026-05-20 00:30:16,404 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders/upcoming
-2026-05-20 00:30:16,661 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders/upcoming "HTTP/1.1 404 Not Found"
-2026-05-20 00:30:16,662 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/members/orders
-2026-05-20 00:30:17,385 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members/orders "HTTP/1.1 200 OK"
-2026-05-20 00:30:18,735 - LineBot - ERROR - Reply 失敗: (401)
-Reason: Unauthorized
-HTTP response headers: <CIMultiDictProxy('Server': 'legy', 'Content-Type': 'application/json', 'WWW-Authenticate': 'Bearer error="invalid_token", error_description="accessToken expired(2)"', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY', 'x-line-request-id': 'e46a49ca-3e44-4aea-b7d5-93b1723e61ac', 'x-xss-protection': '1; mode=block', 'Content-Length': '104', 'Expires': 'Wed, 20 May 2026 00:30:18 GMT', 'Cache-Control': 'max-age=0, no-cache, no-store', 'Pragma': 'no-cache', 'Date': 'Wed, 20 May 2026 00:30:18 GMT', 'Connection': 'close')>
-HTTP response body: {"message":"Authentication failed. Confirm that the access token in the authorization header is valid."}
+2026-05-20 00:48:27,040 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-20 00:48:27,545 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-20 00:48:28,991 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-20 00:48:29,354 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-20 00:48:29,356 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders
+2026-05-20 00:48:29,608 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:29,609 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/orders/upcoming
+2026-05-20 00:48:29,861 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/orders/upcoming "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:29,861 - HohsinAPI - INFO - 嘗試抓取訂單路徑: https://api.ebus.com.tw/web/members/orders
+2026-05-20 00:48:30,487 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members/orders "HTTP/1.1 200 OK"
+INFO:     147.92.149.167:0 - "POST /callback HTTP/1.0" 200 OK
+2026-05-20 00:48:37,885 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757, ID 8533429
+2026-05-20 00:48:38,089 - LineBot - INFO - 收到 QR Code 生成請求: 票號 AP28CS00001757, ID 8533429
+2026-05-20 00:48:39,245 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-20 00:48:39,248 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Home/LogIn "HTTP/1.1 200 OK"
+2026-05-20 00:48:39,746 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-20 00:48:39,804 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/Common/GetCaptchaImage "HTTP/1.1 200 OK"
+2026-05-20 00:48:40,966 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-20 00:48:40,983 - httpx - INFO - HTTP Request: POST https://api.ebus.com.tw/web/members/tokenauth "HTTP/1.1 200 OK"
+2026-05-20 00:48:41,358 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-20 00:48:41,364 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/members "HTTP/1.1 200 OK"
+2026-05-20 00:48:41,610 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429/qrcode "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:41,618 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429/qrcode "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:41,864 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429 "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:41,872 - httpx - INFO - HTTP Request: GET https://api.ebus.com.tw/web/tickets/8533429 "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:42,119 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:42,120 - LineBot - ERROR - QR 失敗: No module named 'qrcode'
+2026-05-20 00:48:42,124 - httpx - INFO - HTTP Request: GET https://www.ebus.com.tw/etc/QRCode/10?TicketNo=AP28CS00001757 "HTTP/1.1 404 Not Found"
+2026-05-20 00:48:42,125 - LineBot - ERROR - QR 失敗: No module named 'qrcode'
