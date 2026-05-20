@@ -1300,7 +1300,7 @@ def handle_message(event):
             # 簡單驗證時間格式 HH:MM
             import re
             if not re.match(r"^\d{2}:\d{2}$", text):
-                await safe_reply(event.reply_token, [TextMessage(text="❌ 格式錯誤，請使用 HH:MM (例如 10:15)")] ))
+                await safe_reply(event.reply_token, [TextMessage(text="❌ 格式錯誤，請使用 HH:MM (例如 10:15)")])
                 return
                 
             state.update({
