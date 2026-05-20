@@ -86,7 +86,9 @@ elif not LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_ID:
 app = FastAPI()
 
 # 修正：掛載靜態檔案目錄，以便提供 QR Code 圖片
-app.mount("/static", StaticFiles(directory="static"), name="static")
+static_dir = os.path.join(os.getcwd(), "static")
+os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 async_api_client = AsyncApiClient(configuration)
