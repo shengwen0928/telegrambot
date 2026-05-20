@@ -199,6 +199,19 @@ async def refresh_line_channel_access_token(expected_token: Optional[str] = None
         logger.info("LINE channel access token 已更新")
         return True
 
+def is_unauthorized_error(err: Exception) -> bool:
+    """判斷是否為 LINE token 失效造成的 401"""
+    if isinstance(err, UnauthorizedException):
+        return True
+    status = getattr(err, "status", None)
+    if status == 401:
+        return True
+    http_resp = getattr(err, "http_resp", None)
+    if http_resp is not None and getattr(http_resp, "status", None) == 401:
+        return True
+    msg = str(err).lower()
+    return "401" in msg or "invalid_token" in msg or "unauthorized" in msg
+
 async def safe_reply(reply_token: str, messages: list, user_id: str = None):
     """具備熔斷保護的回覆函式"""
     global LINE_QUOTA_EXHAUSTED
@@ -208,22 +221,22 @@ async def safe_reply(reply_token: str, messages: list, user_id: str = None):
     
     try:
         await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
-    except UnauthorizedException as e:
-        logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
-        current_token = LINE_CHANNEL_ACCESS_TOKEN
-        if await refresh_line_channel_access_token(current_token):
-            try:
-                await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
-            except Exception as retry_err:
-                if "429" in str(retry_err) or "limit" in str(retry_err).lower():
-                    LINE_QUOTA_EXHAUSTED = True
-                    logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
-                else:
-                    logger.error(f"Reply 重試失敗: {retry_err}")
-        else:
-            logger.error("無法刷新 LINE access token，Reply 失敗")
     except Exception as e:
-        if "429" in str(e) or "limit" in str(e).lower():
+        if is_unauthorized_error(e):
+            logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
+            current_token = LINE_CHANNEL_ACCESS_TOKEN
+            if await refresh_line_channel_access_token(current_token):
+                try:
+                    await line_bot_api.reply_message(ReplyMessageRequest(reply_token=reply_token, messages=messages))
+                except Exception as retry_err:
+                    if "429" in str(retry_err) or "limit" in str(retry_err).lower():
+                        LINE_QUOTA_EXHAUSTED = True
+                        logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+                    else:
+                        logger.error(f"Reply 重試失敗: {retry_err}")
+            else:
+                logger.error("無法刷新 LINE access token，Reply 失敗")
+        elif "429" in str(e) or "limit" in str(e).lower():
             LINE_QUOTA_EXHAUSTED = True
             logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
         else:
@@ -239,25 +252,25 @@ async def safe_push(user_id: str, messages: list):
     try:
         client = line_bot_api_notify if line_bot_api_notify else line_bot_api
         await client.push_message(PushMessageRequest(to=user_id, messages=messages))
-    except UnauthorizedException as e:
-        if client is line_bot_api:
-            logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
-            current_token = LINE_CHANNEL_ACCESS_TOKEN
-            if await refresh_line_channel_access_token(current_token):
-                try:
-                    await line_bot_api.push_message(PushMessageRequest(to=user_id, messages=messages))
-                except Exception as retry_err:
-                    if "429" in str(retry_err) or "limit" in str(retry_err).lower():
-                        LINE_QUOTA_EXHAUSTED = True
-                        logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
-                    else:
-                        logger.error(f"Push 重試失敗: {retry_err}")
-            else:
-                logger.error("無法刷新 LINE access token，Push 失敗")
-        else:
-            logger.error(f"Push 失敗: {e}")
     except Exception as e:
-        if "429" in str(e) or "limit" in str(e).lower():
+        if is_unauthorized_error(e):
+            if client is line_bot_api:
+                logger.warning(f"LINE access token 失效，嘗試刷新: {e}")
+                current_token = LINE_CHANNEL_ACCESS_TOKEN
+                if await refresh_line_channel_access_token(current_token):
+                    try:
+                        await line_bot_api.push_message(PushMessageRequest(to=user_id, messages=messages))
+                    except Exception as retry_err:
+                        if "429" in str(retry_err) or "limit" in str(retry_err).lower():
+                            LINE_QUOTA_EXHAUSTED = True
+                            logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
+                        else:
+                            logger.error(f"Push 重試失敗: {retry_err}")
+                else:
+                    logger.error("無法刷新 LINE access token，Push 失敗")
+            else:
+                logger.error(f"Push 失敗: {e}")
+        elif "429" in str(e) or "limit" in str(e).lower():
             LINE_QUOTA_EXHAUSTED = True
             logger.error("!!! LINE 配額耗盡，啟動熔斷器 !!!")
         else:
