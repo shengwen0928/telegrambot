@@ -52,7 +52,7 @@ Traceback (most recent call last):
   File "<frozen importlib._bootstrap_external>", line 1074, in get_code
   File "<frozen importlib._bootstrap_external>", line 1004, in source_to_code
   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
-  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 1257
-    await safe_reply(event.reply_token, [FlexMessage(alt_text="選擇班次", contents=FlexContainer.from_dict({"type": "carousel", "contents": bubbles}))] ))
-                                                                                                                                                     ^
+  File "/home/ad565198ad56519867/telegrambot/line_bot.py", line 1261
+    await safe_reply(event.reply_token, [TextMessage(text=f"❌ 查詢發生錯誤: {e}")] ))
+                                                                              ^
 SyntaxError: unmatched ')'

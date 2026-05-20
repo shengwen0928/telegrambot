@@ -1258,7 +1258,7 @@ def handle_message(event):
 
                 except Exception as e:
                     logger.error(f"獲取完整班次失敗: {e}")
-                    await safe_reply(event.reply_token, [TextMessage(text=f"❌ 查詢發生錯誤: {e}")] ))
+                    await safe_reply(event.reply_token, [TextMessage(text=f"❌ 查詢發生錯誤: {e}")])
 
             asyncio.create_task(fetch_full_shifts_and_reply())
             return
