@@ -15,6 +15,7 @@ from linebot.v3.messaging import (
     Configuration,
     AsyncApiClient,
     AsyncMessagingApi,
+    AsyncMessagingApiBlob,
     ReplyMessageRequest,
     PushMessageRequest,
     TextMessage,
@@ -30,7 +31,8 @@ from linebot.v3.messaging.exceptions import UnauthorizedException
 from linebot.v3.webhooks import (
     MessageEvent,
     PostbackEvent,
-    TextMessageContent
+    TextMessageContent,
+    ImageMessageContent
 )
 from fastapi.staticfiles import StaticFiles
 
@@ -40,6 +42,7 @@ from src.tr_api import TaiwanRailwayAPI
 from src.tr_stations import TR_STATIONS
 from src.tr_monitor import TaiwanRailwayMonitor
 from src.persistence import save_tasks_to_file, load_tasks_from_file
+from src.ai_chat import ai_reply
 
 # 設定日誌
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -93,6 +96,7 @@ app.mount("/static", StaticFiles(directory=static_dir), name="static")
 configuration = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 async_api_client = AsyncApiClient(configuration)
 line_bot_api = AsyncMessagingApi(async_api_client)
+line_bot_blob = AsyncMessagingApiBlob(async_api_client)   # 下載使用者傳來的圖片
 
 # 初始化備援通知機器人 (如果有的話)
 line_bot_api_notify = None
@@ -1404,8 +1408,38 @@ def handle_message(event):
             await safe_reply(event.reply_token, [start_monitor_task(user_id, state, users)])
             return
 
+        # 💬 阿龜 AI 聊天（落空分支）：以上搶票指令／流程都沒對到 → 交給阿龜自然對話／回答問題。
+        # 需要文字輸入的步驟（手機/密碼/座號/身分證）都在前面就 return 了，
+        # 所以這裡不會攔到密碼、也不會打斷搶票流程。
+        try:
+            reply_text = await ai_reply(user_id, text)
+        except Exception as e:
+            logger.error(f"阿龜聊天失敗: {e}")
+            reply_text = "抱歉，我剛剛恍神了一下，再說一次好嗎？"
+        await safe_reply(event.reply_token, [TextMessage(text=reply_text)], user_id)
+        return
+
     # 正式排程執行非同步邏輯
     asyncio.create_task(process_msg())
+
+
+@handler.add(MessageEvent, message=ImageMessageContent)
+def handle_image(event):
+    """使用者傳圖片 → 阿龜用視覺模型看懂／OCR，回覆說明。"""
+    user_id = event.source.user_id
+    msg_id = event.message.id
+
+    async def process_img():
+        try:
+            from src.ai_tools import vision_describe
+            image_bytes = await line_bot_blob.get_message_content(message_id=msg_id)
+            desc = await vision_describe(bytes(image_bytes))
+        except Exception as e:
+            logger.error(f"看圖失敗: {e}")
+            desc = "抱歉，我剛剛看圖的時候恍神了，再傳一次好嗎？"
+        await safe_reply(event.reply_token, [TextMessage(text=desc)], user_id)
+
+    asyncio.create_task(process_img())
 
 
 @handler.add(PostbackEvent)
@@ -1507,6 +1541,12 @@ async def startup_event():
     await init_stations()
     # 恢復之前的任務
     await recover_all_tasks()
+    # 啟動阿龜的提醒排程（到時間主動 push）
+    try:
+        from src.ai_tools import reminder_loop
+        asyncio.create_task(reminder_loop())
+    except Exception as e:
+        logger.error(f"提醒排程啟動失敗: {e}")
     logger.info("LINE Bot 伺服器已啟動！")
 
 @app.on_event("shutdown")
