@@ -253,25 +253,30 @@ class HohsinAPI:
         url_api = f"{self.BASE_URL}/web/tickets/{ticket_id}/qrcode"
         try:
             resp = await self.client.get(url_api)
-            if resp.status_code == 200:
-                if "image" in resp.headers.get("Content-Type", ""):
-                    logger.info(f"第一層成功：從 API 下載圖片 (ID: {ticket_id})")
+            ct = resp.headers.get("Content-Type", "")
+            if "image" in ct:
+                logger.info(f"[QR診斷] L1 {resp.status_code} 收到圖片 ({ct})，直接用")
+                if resp.status_code == 200:
                     return resp.content
-                # 如果回傳 JSON，解析內部
-                data = resp.json()
-                qr_base64 = data.get("result", {}).get("qrCodeData")
-                if qr_base64:
-                    logger.info(f"第一層成功：從 API 獲取 base64 (ID: {ticket_id})")
-                    return self._decode_qr_base64(qr_base64)
+            else:
+                logger.info(f"[QR診斷] L1 status={resp.status_code} ct={ct} body={resp.text[:800]}")
+                if resp.status_code == 200:
+                    data = resp.json()
+                    res = data.get("result")
+                    logger.info(f"[QR診斷] L1 top_keys={list(data.keys())} "
+                                f"result_keys={list(res.keys()) if isinstance(res, dict) else type(res).__name__}")
+                    qr_base64 = (res or {}).get("qrCodeData") if isinstance(res, dict) else None
+                    if qr_base64:
+                        return self._decode_qr_base64(qr_base64)
         except Exception as e:
             logger.warning(f"第一層獲取失敗: {e}")
 
         # 第二層：從詳情 JSON 提取
         try:
             detail = await self.get_ticket_detail(ticket_id)
-            qr_base64 = detail.get("qrCodeData")
+            logger.info(f"[QR診斷] L2 detail_keys={list(detail.keys()) if isinstance(detail, dict) else type(detail).__name__}")
+            qr_base64 = detail.get("qrCodeData") if isinstance(detail, dict) else None
             if qr_base64:
-                logger.info(f"第二層成功：從詳情獲取 base64 (ID: {ticket_id})")
                 return self._decode_qr_base64(qr_base64)
         except Exception as e:
             logger.warning(f"第二層獲取失敗: {e}")
