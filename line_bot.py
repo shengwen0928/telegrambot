@@ -1528,9 +1528,7 @@ def handle_postback(event):
                     card = FlexMessage(alt_text="無可用時段", contents=FlexContainer.from_dict(create_base_flex_card("⚠️ 無可用時段", contents)), quick_reply=create_date_picker_quick_reply())
                 await safe_reply(event.reply_token, [card], user_id)
 
-    asyncio.create_task(process_postback())
-
-    # 排程執行
+    # 排程執行（只排一次；先前重複排了兩次會導致每個 postback 執行兩遍）
     asyncio.create_task(process_postback())
 
 

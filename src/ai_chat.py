@@ -126,6 +126,7 @@ async def ai_reply(user_id: str, user_text: str) -> str:
                [{"role": "user", "content": user_text}]
 
     final = None
+    used_tools = False
     async with httpx.AsyncClient() as client:
         for _step in range(MAX_STEPS):
             msg = await _complete(client, messages, use_tools=True)
@@ -136,6 +137,7 @@ async def ai_reply(user_id: str, user_text: str) -> str:
 
             tool_calls = msg.get("tool_calls")
             if tool_calls:
+                used_tools = True
                 # 保留 assistant 的工具呼叫訊息，再逐一執行、把結果餵回
                 messages.append({"role": "assistant",
                                  "content": msg.get("content") or "",
@@ -157,6 +159,17 @@ async def ai_reply(user_id: str, user_text: str) -> str:
             if content:
                 final = content
             break
+
+        # 收尾：工具已經跑完拿到結果，但還沒產出最終回答
+        # （用完步數時最後一步仍在呼叫工具，或後續請求失敗）→ 再要一次純文字總結，
+        # 避免「明明查到了卻回大腦連不上」。
+        if final is None and used_tools:
+            try:
+                msg = await _complete(client, messages, use_tools=False)
+                if msg:
+                    final = _strip_reasoning(msg.get("content") or "") or None
+            except Exception:
+                pass
 
     if not final:
         return "抱歉，我的大腦剛好連不上（雲端模型忙線中），等一下再傳一次給我吧～"

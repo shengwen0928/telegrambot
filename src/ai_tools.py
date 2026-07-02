@@ -102,6 +102,14 @@ def _save_mem(data: dict):
 # ctx = {"user_id": str, "is_owner": bool}
 # ══════════════════════════════════════════════════════════════════
 
+def _as_int(v, default):
+    """把模型/使用者傳來的值安全轉成 int；'5.0'、'5' 都行，非數字則用預設，不讓工具整個失敗。"""
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return default
+
+
 def _clean(html_frag: str) -> str:
     return unescape(re.sub(r"<[^>]+>", "", html_frag)).strip()
 
@@ -118,7 +126,7 @@ async def _web_search(args, ctx):
     q = (args.get("query") or "").strip()
     if not q:
         return "沒有提供搜尋關鍵字。"
-    maxr = min(int(args.get("max_results", 5)), 8)
+    maxr = min(_as_int(args.get("max_results"), 5), 8)
     async with httpx.AsyncClient(headers=_UA, timeout=15, follow_redirects=True) as c:
         r = await c.post("https://html.duckduckgo.com/html/", data={"q": q})
     titles = re.findall(r'class="result__a"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', r.text, re.DOTALL)
@@ -141,7 +149,7 @@ async def _web_fetch(args, ctx):
     url = (args.get("url") or "").strip()
     if not _url_is_safe(url):
         return "拒絕：網址無效或指向內網/本機位址（安全防護）。"
-    maxc = min(int(args.get("max_chars", 4000)), 8000)
+    maxc = min(_as_int(args.get("max_chars"), 4000), 8000)
     async with httpx.AsyncClient(headers=_UA, timeout=20, follow_redirects=True) as c:
         r = await c.get(url)
     text = r.text
@@ -198,7 +206,7 @@ def _run_python(args, ctx):
     code = args.get("code") or ""
     if _DANGER.search(code):
         return "拒絕：程式碼包含高風險樣式（檔案/系統/網路操作），未執行。"
-    timeout = min(int(args.get("timeout", 15)), 30)
+    timeout = min(_as_int(args.get("timeout"), 15), 30)
     py = sys.executable or "python3"
     # 🔒 就算對所有人開放，仍把祕密從子行程環境中清掉（只留 PATH），
     # 讓被執行的程式碼讀不到 .env 裡的 token/密碼/金鑰（os.environ 會是空的）。
@@ -410,13 +418,22 @@ async def reminder_loop(interval: int = 20):
             for it in items:
                 if not it.get("done") and it.get("fire_ts", 0) <= now_ts:
                     ok = await push_line(it["user_id"], f"⏰ 提醒：{it['text']}")
-                    it["done"] = ok or True   # 推過就標記，避免重複轟炸
+                    it["tries"] = it.get("tries", 0) + 1
+                    # 成功才標記完成；失敗留到下輪重試，最多 3 次以免無限重試
+                    it["done"] = ok or it["tries"] >= 3
                     changed = True
             if changed:
-                # 清掉已完成且超過一天的舊提醒
-                items = [it for it in items
+                # 重新讀檔（避免覆蓋掉這段時間別處新增的提醒），只把我們處理過的標記合併回去
+                fresh = _load_reminders()
+                marks = {(it["user_id"], it.get("fire_ts"), it.get("text")): it for it in items}
+                for f in fresh:
+                    m = marks.get((f["user_id"], f.get("fire_ts"), f.get("text")))
+                    if m:
+                        f["done"] = m.get("done", f.get("done"))
+                        f["tries"] = m.get("tries", f.get("tries", 0))
+                fresh = [it for it in fresh
                          if not (it.get("done") and it.get("fire_ts", 0) < now_ts - 86400)]
-                _save_reminders(items)
+                _save_reminders(fresh)
         except Exception as e:
             logger.error(f"提醒迴圈錯誤: {e}")
         await asyncio.sleep(interval)
@@ -482,7 +499,12 @@ async def _crypto_price(args, ctx):
     if cid not in data:
         return f"查不到加密貨幣「{raw}」的報價（試試英文代號如 btc / eth）。"
     d = data[cid]
-    chg = d.get(f"{vs}_24h_change") or d.get("usd_24h_change") or 0
+    # 用明確的 None 判斷，避免真正的 0.0%（falsy）被誤判成「沒資料」而跳去別的幣別
+    chg = d.get(f"{vs}_24h_change")
+    if chg is None:
+        chg = d.get("usd_24h_change")
+    if chg is None:
+        chg = 0
     arrow = "🔺" if chg >= 0 else "🔻"
     lines = [f"💰 {cid.upper()}"]
     if vs in d:
