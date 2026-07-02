@@ -887,8 +887,6 @@ async def handle_my_tickets(user_id: str, reply_token: str):
             ticket_bubbles = []
             for order in orders[:5]:
                 for t in order.get("tickets", []):
-                    # [QR診斷] 印出車票物件所有欄位（值截斷 80 字），找 QR 藏在哪
-                    logger.info(f"[QR診斷] ticket 全欄位: { {k: str(v)[:80] for k, v in t.items()} }")
                     # 過濾出有效的票 (含付款、取票、驗票中)
                     status = t.get("xActionDescription", "")
                     if any(x in status for x in ["付款", "取票", "驗票"]):
