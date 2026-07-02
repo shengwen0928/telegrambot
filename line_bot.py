@@ -1496,7 +1496,7 @@ def handle_postback(event):
                         await api.close()
                         raise Exception("登入失敗")
 
-                base_url = "https://my-hohsin-bot.duckdns.org"
+                base_url = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
                 image_url = f"{base_url}/static/qrcodes/{qr_filename}?t={int(datetime.now().timestamp())}"
                 status_text = "✅ QR 圖檔已取得"
                 await safe_push(user_id, [
