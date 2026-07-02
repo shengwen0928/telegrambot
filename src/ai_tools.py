@@ -798,6 +798,159 @@ async def _find_place(args, ctx):
 
 
 # ══════════════════════════════════════════════════════════════════
+# 待辦清單（每人隔離）
+# ══════════════════════════════════════════════════════════════════
+
+TODO_FILE = "todos.json"
+
+
+def _load_todos() -> dict:
+    if os.path.exists(TODO_FILE):
+        try:
+            with open(TODO_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_todos(d: dict):
+    try:
+        with open(TODO_FILE, "w", encoding="utf-8") as f:
+            json.dump(d, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"寫入待辦失敗: {e}")
+
+
+def _add_todo(args, ctx):
+    text = (args.get("text") or "").strip()
+    if not text:
+        return "要加什麼待辦事項呢？"
+    d = _load_todos()
+    d.setdefault(ctx["user_id"], []).append({"text": text, "done": False})
+    _save_todos(d)
+    n = len([t for t in d[ctx["user_id"]] if not t["done"]])
+    return f"✅ 已加入待辦：{text}（目前有 {n} 項未完成）"
+
+
+def _list_todos(args, ctx):
+    items = _load_todos().get(ctx["user_id"], [])
+    pending = [t for t in items if not t.get("done")]
+    if not pending:
+        return "🎉 你沒有未完成的待辦，讚！"
+    lines = ["📝 你的待辦清單："]
+    for i, t in enumerate(pending, 1):
+        lines.append(f"  {i}. {t['text']}")
+    return "\n".join(lines)
+
+
+def _complete_todo(args, ctx):
+    d = _load_todos()
+    items = d.get(ctx["user_id"], [])
+    pending = [t for t in items if not t.get("done")]
+    if not pending:
+        return "目前沒有待辦可以完成喔。"
+    key = args.get("which")
+    target = None
+    if isinstance(key, (int, float)) or (isinstance(key, str) and key.isdigit()):
+        idx = int(key) - 1
+        if 0 <= idx < len(pending):
+            target = pending[idx]
+    if target is None and isinstance(key, str):
+        target = next((t for t in pending if key.strip() in t["text"]), None)
+    if target is None:
+        return "找不到那一項待辦，先用「看待辦」確認編號吧。"
+    target["done"] = True
+    _save_todos(d)
+    return f"🎯 完成：{target['text']}！"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 單位換算（長度／重量／溫度）
+# ══════════════════════════════════════════════════════════════════
+
+_UNIT_TABLE = {
+    "length": {"m": 1, "km": 1000, "cm": 0.01, "mm": 0.001, "mi": 1609.34, "mile": 1609.34,
+               "ft": 0.3048, "in": 0.0254, "inch": 0.0254, "yd": 0.9144,
+               "公里": 1000, "公尺": 1, "公分": 0.01, "英里": 1609.34, "英尺": 0.3048, "英吋": 0.0254},
+    "weight": {"kg": 1, "g": 0.001, "mg": 1e-6, "t": 1000, "ton": 1000, "lb": 0.453592,
+               "pound": 0.453592, "oz": 0.0283495,
+               "公斤": 1, "公克": 0.001, "噸": 1000, "磅": 0.453592, "盎司": 0.0283495,
+               "台斤": 0.6, "斤": 0.6},
+}
+
+
+def _to_celsius(v, u):
+    u = u.lower()
+    if u in ("c", "°c", "攝氏"):
+        return v
+    if u in ("f", "°f", "華氏"):
+        return (v - 32) * 5 / 9
+    if u in ("k", "克耳文"):
+        return v - 273.15
+    return None
+
+
+def _from_celsius(c, u):
+    u = u.lower()
+    if u in ("c", "°c", "攝氏"):
+        return c
+    if u in ("f", "°f", "華氏"):
+        return c * 9 / 5 + 32
+    if u in ("k", "克耳文"):
+        return c + 273.15
+    return None
+
+
+def _unit_convert(args, ctx):
+    try:
+        amount = float(args.get("amount"))
+    except Exception:
+        return "請提供數值。"
+    frm = (args.get("from_unit") or "").strip()
+    to = (args.get("to_unit") or "").strip()
+    # 溫度
+    c = _to_celsius(amount, frm)
+    if c is not None:
+        res = _from_celsius(c, to)
+        if res is not None:
+            return f"{amount:g} {frm} = {res:.2f} {to}"
+        return f"不支援溫度單位「{to}」。"
+    # 長度/重量
+    for cat, table in _UNIT_TABLE.items():
+        if frm in table and to in table:
+            res = amount * table[frm] / table[to]
+            return f"{amount:g} {frm} = {res:,.4g} {to}"
+    return f"我不會換算「{frm}」→「{to}」（支援長度/重量/溫度）。"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 統一發票對獎（財政部官方號碼）
+# ══════════════════════════════════════════════════════════════════
+
+async def _invoice_lottery(args, ctx):
+    # 註：財政部憑證缺 Subject Key Identifier，部分新版 OpenSSL 會拒絕（此機器測試即失敗），
+    # 但在多數伺服器（如 Debian）可正常驗證。這裡維持正常 TLS 驗證，失敗時優雅回錯誤訊息。
+    try:
+        async with httpx.AsyncClient(headers=_UA, timeout=15, follow_redirects=True) as c:
+            r = await c.get("https://invoice.etax.nat.gov.tw/invoice.xml")
+        txt = r.text
+    except Exception:
+        return "目前連不到財政部的發票中獎號碼服務（可能是憑證問題），稍後再試。"
+    items = re.findall(r"<item>(.*?)</item>", txt, re.DOTALL)
+    if not items:
+        return "抓不到統一發票中獎號碼，稍後再試。"
+    # 取最新一期（第一個 item）
+    it = items[0]
+    title = re.search(r"<title>(.*?)</title>", it, re.DOTALL)
+    period = unescape(title.group(1)).strip() if title else "最新一期"
+    desc = re.search(r"<description>(.*?)</description>", it, re.DOTALL)
+    body = unescape(re.sub(r"<[^>]+>", " ", desc.group(1))) if desc else ""
+    body = re.sub(r"\s+", " ", body).strip()
+    return f"🧾 {period}\n{body[:600]}"
+
+
+# ══════════════════════════════════════════════════════════════════
 # 工具註冊表：OpenAI 相容 function schema + handler + 是否主人限定
 # ══════════════════════════════════════════════════════════════════
 
@@ -857,6 +1010,15 @@ _DEF = [
      {"topic": {"type": "string", "description": "主題關鍵字，可省略"}}, []),
     (_find_place, False, "find_place", "查詢地點的地址、座標與地圖連結。",
      {"query": {"type": "string", "description": "地點名稱或地址"}}, ["query"]),
+    (_add_todo, False, "add_todo", "新增一項待辦事項到使用者的待辦清單。",
+     {"text": {"type": "string"}}, ["text"]),
+    (_list_todos, False, "list_todos", "列出使用者尚未完成的待辦事項。", {}, []),
+    (_complete_todo, False, "complete_todo", "把某項待辦標記為完成（用編號或關鍵字）。",
+     {"which": {"type": "string", "description": "待辦編號或關鍵字"}}, ["which"]),
+    (_unit_convert, False, "unit_convert", "單位換算（長度／重量／溫度），如公里↔英里、公斤↔磅、攝氏↔華氏。",
+     {"amount": {"type": "number"}, "from_unit": {"type": "string"}, "to_unit": {"type": "string"}},
+     ["amount", "from_unit", "to_unit"]),
+    (_invoice_lottery, False, "invoice_lottery", "查詢台灣統一發票最新一期中獎號碼。", {}, []),
 ]
 
 HANDLERS = {name: fn for (fn, _own, name, _d, _p, _r) in _DEF}
