@@ -19,6 +19,8 @@ import uuid
 import socket
 import shutil
 import base64
+import random
+import hashlib
 import logging
 import asyncio
 import operator
@@ -951,6 +953,175 @@ async def _invoice_lottery(args, ctx):
 
 
 # ══════════════════════════════════════════════════════════════════
+# 萌典（中文字／詞／成語 解釋，免金鑰）
+# ══════════════════════════════════════════════════════════════════
+
+async def _moedict(args, ctx):
+    term = (args.get("term") or "").strip()
+    if not term:
+        return "要查哪個字或詞？"
+    async with httpx.AsyncClient(headers=_UA, timeout=15, follow_redirects=True) as c:
+        r = await c.get(f"https://www.moedict.tw/uni/{urllib.parse.quote(term)}.json")
+    if r.status_code != 200:
+        return f"萌典查無「{term}」。"
+    try:
+        data = r.json()
+    except Exception:
+        return f"萌典查無「{term}」。"
+    out = [f"📗 {data.get('title', term)}"]
+    for h in data.get("heteronyms", [])[:2]:
+        if h.get("bopomofo"):
+            out.append(f"注音：{h['bopomofo']}")
+        for d in h.get("definitions", [])[:4]:
+            defn = d.get("def", "")
+            if defn:
+                line = f"• {defn}"
+                if d.get("example"):
+                    line += f"（例：{'；'.join(d['example'])[:60]}）"
+                out.append(line)
+    return "\n".join(out) if len(out) > 1 else f"萌典查無「{term}」。"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 英文字典（dictionaryapi.dev，免金鑰）
+# ══════════════════════════════════════════════════════════════════
+
+async def _dictionary(args, ctx):
+    word = (args.get("word") or "").strip()
+    if not word:
+        return "要查哪個英文單字？"
+    async with httpx.AsyncClient(headers=_UA, timeout=15, follow_redirects=True) as c:
+        r = await c.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{urllib.parse.quote(word)}")
+    if r.status_code != 200:
+        return f"字典查無「{word}」。"
+    try:
+        entry = r.json()[0]
+    except Exception:
+        return f"字典查無「{word}」。"
+    out = [f"🔤 {entry.get('word', word)}"]
+    ph = entry.get("phonetic") or next((p.get("text") for p in entry.get("phonetics", []) if p.get("text")), "")
+    if ph:
+        out.append(f"音標：{ph}")
+    for m in entry.get("meanings", [])[:3]:
+        pos = m.get("partOfSpeech", "")
+        for d in m.get("definitions", [])[:2]:
+            out.append(f"• ({pos}) {d.get('definition', '')}")
+    return "\n".join(out)
+
+
+# ══════════════════════════════════════════════════════════════════
+# 世界時鐘（pytz，純本地計算、免網路）
+# ══════════════════════════════════════════════════════════════════
+
+_CITY_TZ = {
+    "台北": "Asia/Taipei", "taipei": "Asia/Taipei", "台灣": "Asia/Taipei",
+    "東京": "Asia/Tokyo", "tokyo": "Asia/Tokyo", "日本": "Asia/Tokyo",
+    "首爾": "Asia/Seoul", "seoul": "Asia/Seoul", "韓國": "Asia/Seoul",
+    "北京": "Asia/Shanghai", "上海": "Asia/Shanghai", "中國": "Asia/Shanghai",
+    "香港": "Asia/Hong_Kong", "hongkong": "Asia/Hong_Kong",
+    "新加坡": "Asia/Singapore", "singapore": "Asia/Singapore",
+    "曼谷": "Asia/Bangkok", "泰國": "Asia/Bangkok",
+    "倫敦": "Europe/London", "london": "Europe/London", "英國": "Europe/London",
+    "巴黎": "Europe/Paris", "paris": "Europe/Paris", "法國": "Europe/Paris",
+    "柏林": "Europe/Berlin", "德國": "Europe/Berlin",
+    "紐約": "America/New_York", "newyork": "America/New_York", "美東": "America/New_York",
+    "洛杉磯": "America/Los_Angeles", "la": "America/Los_Angeles", "美西": "America/Los_Angeles",
+    "舊金山": "America/Los_Angeles", "西雅圖": "America/Los_Angeles",
+    "雪梨": "Australia/Sydney", "sydney": "Australia/Sydney", "澳洲": "Australia/Sydney",
+}
+
+
+def _world_time(args, ctx):
+    place = (args.get("place") or "").strip()
+    if not place:
+        return "要查哪個城市的時間？"
+    tzname = _CITY_TZ.get(place.lower().replace(" ", "")) or _CITY_TZ.get(place)
+    if not tzname and "/" in place:
+        tzname = place                       # 直接給時區名
+    if not tzname:
+        return f"我不確定「{place}」的時區，試試常見城市（東京、紐約、倫敦…）或給時區名如 Asia/Tokyo。"
+    tz = None
+    try:
+        from zoneinfo import ZoneInfo      # 標準庫（Linux 免額外相依）
+        tz = ZoneInfo(tzname)
+    except Exception:
+        try:
+            import pytz
+            tz = pytz.timezone(tzname)
+        except Exception:
+            tz = None
+    if tz is None:
+        return f"查不到「{place}」的時間（伺服器缺時區資料）。"
+    now = datetime.now(tz)
+    week = ["一", "二", "三", "四", "五", "六", "日"][now.weekday()]
+    return f"🕐 {place} 現在 {now.strftime('%Y-%m-%d %H:%M')} 星期{week}"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 短網址（is.gd，免金鑰）
+# ══════════════════════════════════════════════════════════════════
+
+async def _short_url(args, ctx):
+    url = (args.get("url") or "").strip()
+    if not re.match(r"^https?://", url, re.IGNORECASE):
+        return "請提供有效的 http(s) 網址。"
+    api = "https://is.gd/create.php?format=simple&url=" + urllib.parse.quote(url)
+    async with httpx.AsyncClient(headers=_UA, timeout=15, follow_redirects=True) as c:
+        r = await c.get(api)
+    short = r.text.strip()
+    return f"🔗 {short}" if short.startswith("http") else f"縮網址失敗：{short[:100]}"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 抽籤／擲骰／隨機決定
+# ══════════════════════════════════════════════════════════════════
+
+def _random_pick(args, ctx):
+    choices = args.get("choices")
+    if isinstance(choices, list) and choices:
+        return f"🎲 我幫你選：{random.choice([str(x) for x in choices])}"
+    dice = (args.get("dice") or "").strip().lower()
+    m = re.fullmatch(r"(\d*)d(\d+)", dice)
+    if m:
+        n = int(m.group(1) or 1)
+        sides = int(m.group(2))
+        if 1 <= n <= 20 and 2 <= sides <= 1000:
+            rolls = [random.randint(1, sides) for _ in range(n)]
+            return f"🎲 擲 {dice}：{rolls}（總和 {sum(rolls)}）"
+    lo = args.get("min")
+    hi = args.get("max")
+    if lo is not None and hi is not None:
+        try:
+            return f"🎲 {random.randint(int(lo), int(hi))}"
+        except Exception:
+            pass
+    return "給我選項清單（choices）、骰子（dice 如 2d6）或範圍（min/max）吧。"
+
+
+# ══════════════════════════════════════════════════════════════════
+# 編碼工具（base64 / url / hash）
+# ══════════════════════════════════════════════════════════════════
+
+def _encode_tool(args, ctx):
+    op = (args.get("op") or "").strip().lower()
+    text = args.get("text") or ""
+    try:
+        if op == "base64_encode":
+            return base64.b64encode(text.encode()).decode()
+        if op == "base64_decode":
+            return base64.b64decode(text.encode()).decode("utf-8", errors="replace")
+        if op == "url_encode":
+            return urllib.parse.quote(text)
+        if op == "url_decode":
+            return urllib.parse.unquote(text)
+        if op in ("md5", "sha1", "sha256"):
+            return getattr(hashlib, op)(text.encode()).hexdigest()
+    except Exception as e:
+        return f"處理失敗：{e}"
+    return "op 請用 base64_encode/base64_decode/url_encode/url_decode/md5/sha1/sha256 其中之一。"
+
+
+# ══════════════════════════════════════════════════════════════════
 # 工具註冊表：OpenAI 相容 function schema + handler + 是否主人限定
 # ══════════════════════════════════════════════════════════════════
 
@@ -1019,6 +1190,20 @@ _DEF = [
      {"amount": {"type": "number"}, "from_unit": {"type": "string"}, "to_unit": {"type": "string"}},
      ["amount", "from_unit", "to_unit"]),
     (_invoice_lottery, False, "invoice_lottery", "查詢台灣統一發票最新一期中獎號碼。", {}, []),
+    (_moedict, False, "moedict", "查萌典：中文字／詞／成語的注音與解釋（台灣國語辭典）。",
+     {"term": {"type": "string", "description": "要查的中文字詞或成語"}}, ["term"]),
+    (_dictionary, False, "dictionary", "查英文單字的音標與釋義。",
+     {"word": {"type": "string", "description": "英文單字"}}, ["word"]),
+    (_world_time, False, "world_time", "查世界各城市的現在時間。",
+     {"place": {"type": "string", "description": "城市名，如 東京/紐約/倫敦，或時區名 Asia/Tokyo"}}, ["place"]),
+    (_short_url, False, "short_url", "把長網址縮短。",
+     {"url": {"type": "string"}}, ["url"]),
+    (_random_pick, False, "random_pick", "抽籤／擲骰／隨機決定：給選項清單、骰子(如 2d6)或範圍(min/max)。",
+     {"choices": {"type": "array", "items": {"type": "string"}},
+      "dice": {"type": "string"}, "min": {"type": "integer"}, "max": {"type": "integer"}}, []),
+    (_encode_tool, False, "encode_tool", "編碼/雜湊工具：base64、URL 編解碼、md5/sha1/sha256。",
+     {"op": {"type": "string", "description": "base64_encode/base64_decode/url_encode/url_decode/md5/sha1/sha256"},
+      "text": {"type": "string"}}, ["op", "text"]),
 ]
 
 HANDLERS = {name: fn for (fn, _own, name, _d, _p, _r) in _DEF}

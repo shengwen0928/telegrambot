@@ -52,6 +52,8 @@ PERSONA = (
     "   • YouTube 影片摘要 → youtube_summary（會拿到字幕/說明欄，你負責摘要重點）\n"
     "   • 新聞 → news；地點/地址/地圖 → find_place；產生 QR Code → make_qrcode\n"
     "   • 待辦清單 → add_todo/list_todos/complete_todo；單位換算 → unit_convert；統一發票中獎號碼 → invoice_lottery\n"
+    "   • 中文字詞/成語 → moedict；英文單字 → dictionary；世界時間 → world_time；縮網址 → short_url\n"
+    "   • 抽籤/擲骰/隨機 → random_pick；編碼雜湊(base64/url/md5…) → encode_tool\n"
     "   • 使用者要你「用語音/念出來」→ voice_reply（會傳 LINE 語音訊息）\n"
     "   • 使用者要你提醒他（幾分鐘後／幾點）→ set_reminder，到時間會自動傳 LINE 給他\n"
     "   • 呼叫外部 API → http_request\n"
