@@ -245,61 +245,22 @@ class HohsinAPI:
 
     async def get_resilient_qrcode(self, ticket_id: int) -> Optional[bytes]:
         """
-        多層 Fallback 獲取 QR Code：
-        0. 新版 APP API：vapi.ebus.com.tw/app/android/tickets/{id}/infos/back（動態 qrcode token）
-        1. 嘗試 /web/tickets/{id}/qrcode
-        2. 嘗試 /web/tickets/{id} 找 qrCodeData (base64)
+        取得車票 QR。
+
+        ⚠️ 和欣已改版（2026）：舊的 web 端點都已失效
+           - GET web/tickets/{id}/qrcode  → 404
+           - GET web/tickets/{id}         → 空
+
+        官方 QR 現在改由「APP API」提供，且是**動態時效 token**，需 APP 專屬登入：
+           登入： PUT https://vapi.ebus.com.tw/app/android/members/tokenauth
+                  body 欄位：account/phone/password/userName/androidClientId/deviceId/platform → 回 accessToken
+           取QR： PUT https://vapi.ebus.com.tw/app/android/tickets/{id}/infos/back
+                  → result.qrcode（字串 payload）+ qrCodeFormat + expireInSeconds/expires
+                  （APP 端拿 payload 用 qr_flutter 本地畫成 QR）
+
+        目前尚未實作 APP 登入（androidClientId 為動態產生、且需以真實帳號逐步試登），
+        故此處回 None。要支援請在此串接 vapi 登入 → infos/back → 用 payload 產生 QR 圖。
         """
-        # 第零層：新版 APP 端點（診斷：試 POST/GET，印狀態、Allow 標頭與欄位，不印個資）
-        vapi_url = f"https://vapi.ebus.com.tw/app/android/tickets/{ticket_id}/infos/back"
-        _vhdr = {"Authorization": f"Bearer {self.access_token}", "Accept": "application/json"}
-        try:
-            r = await self.client.put(vapi_url, headers=_vhdr, json={})
-            ct = r.headers.get("Content-Type", "")
-            if r.status_code == 200 and "json" in ct:
-                j = r.json()
-                res = j.get("result", j) if isinstance(j, dict) else {}
-                res = res if isinstance(res, dict) else {}
-                payload = res.get("qrcode")
-                logger.info(f"[QR新端點] PUT 200 top_keys={list(j.keys()) if isinstance(j, dict) else '?'} "
-                            f"result_keys={list(res.keys())} has_qrcode={bool(payload)} qrlen={len(str(payload)) if payload else 0}")
-            else:
-                logger.info(f"[QR新端點] PUT status={r.status_code} ct={ct} body={r.text[:300]}")
-        except Exception as e:
-            logger.warning(f"[QR新端點] PUT 失敗: {e}")
-
-        # 第一層：直接 API 下載
-        url_api = f"{self.BASE_URL}/web/tickets/{ticket_id}/qrcode"
-        try:
-            resp = await self.client.get(url_api)
-            ct = resp.headers.get("Content-Type", "")
-            if "image" in ct:
-                logger.info(f"[QR診斷] L1 {resp.status_code} 收到圖片 ({ct})，直接用")
-                if resp.status_code == 200:
-                    return resp.content
-            else:
-                logger.info(f"[QR診斷] L1 status={resp.status_code} ct={ct} body={resp.text[:800]}")
-                if resp.status_code == 200:
-                    data = resp.json()
-                    res = data.get("result")
-                    logger.info(f"[QR診斷] L1 top_keys={list(data.keys())} "
-                                f"result_keys={list(res.keys()) if isinstance(res, dict) else type(res).__name__}")
-                    qr_base64 = (res or {}).get("qrCodeData") if isinstance(res, dict) else None
-                    if qr_base64:
-                        return self._decode_qr_base64(qr_base64)
-        except Exception as e:
-            logger.warning(f"第一層獲取失敗: {e}")
-
-        # 第二層：從詳情 JSON 提取
-        try:
-            detail = await self.get_ticket_detail(ticket_id)
-            logger.info(f"[QR診斷] L2 detail_keys={list(detail.keys()) if isinstance(detail, dict) else type(detail).__name__}")
-            qr_base64 = detail.get("qrCodeData") if isinstance(detail, dict) else None
-            if qr_base64:
-                return self._decode_qr_base64(qr_base64)
-        except Exception as e:
-            logger.warning(f"第二層獲取失敗: {e}")
-
         return None
 
     def _decode_qr_base64(self, data_str: str) -> Optional[bytes]:

@@ -1498,7 +1498,7 @@ def handle_postback(event):
                                 with open(qr_path, "wb") as f: f.write(resp.content)
                                 is_official = True
                             else:
-                                raise Exception("官方 QR 暫時無法取得")
+                                raise Exception("和欣已改版，LINE 端暫不支援顯示官方 QR，請改用和欣 APP 查看車票 QR 🙏")
                         await api.close()
                     else:
                         await api.close()
