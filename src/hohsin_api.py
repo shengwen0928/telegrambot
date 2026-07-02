@@ -253,26 +253,20 @@ class HohsinAPI:
         # 第零層：新版 APP 端點（診斷：試 POST/GET，印狀態、Allow 標頭與欄位，不印個資）
         vapi_url = f"https://vapi.ebus.com.tw/app/android/tickets/{ticket_id}/infos/back"
         _vhdr = {"Authorization": f"Bearer {self.access_token}", "Accept": "application/json"}
-        for _m in ("POST", "GET"):
-            try:
-                if _m == "POST":
-                    r = await self.client.post(vapi_url, headers=_vhdr, json={})
-                else:
-                    r = await self.client.get(vapi_url, headers=_vhdr)
-                ct = r.headers.get("Content-Type", "")
-                allow = r.headers.get("Allow", "")
-                if r.status_code == 200 and "json" in ct:
-                    j = r.json()
-                    res = j.get("result", j) if isinstance(j, dict) else {}
-                    res = res if isinstance(res, dict) else {}
-                    payload = res.get("qrcode")
-                    logger.info(f"[QR新端點] {_m} 200 top_keys={list(j.keys()) if isinstance(j, dict) else '?'} "
-                                f"result_keys={list(res.keys())} has_qrcode={bool(payload)} qrlen={len(str(payload)) if payload else 0}")
-                    break
-                else:
-                    logger.info(f"[QR新端點] {_m} status={r.status_code} allow={allow} ct={ct} body={r.text[:300]}")
-            except Exception as e:
-                logger.warning(f"[QR新端點] {_m} 失敗: {e}")
+        try:
+            r = await self.client.put(vapi_url, headers=_vhdr, json={})
+            ct = r.headers.get("Content-Type", "")
+            if r.status_code == 200 and "json" in ct:
+                j = r.json()
+                res = j.get("result", j) if isinstance(j, dict) else {}
+                res = res if isinstance(res, dict) else {}
+                payload = res.get("qrcode")
+                logger.info(f"[QR新端點] PUT 200 top_keys={list(j.keys()) if isinstance(j, dict) else '?'} "
+                            f"result_keys={list(res.keys())} has_qrcode={bool(payload)} qrlen={len(str(payload)) if payload else 0}")
+            else:
+                logger.info(f"[QR新端點] PUT status={r.status_code} ct={ct} body={r.text[:300]}")
+        except Exception as e:
+            logger.warning(f"[QR新端點] PUT 失敗: {e}")
 
         # 第一層：直接 API 下載
         url_api = f"{self.BASE_URL}/web/tickets/{ticket_id}/qrcode"
