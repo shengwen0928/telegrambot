@@ -890,7 +890,15 @@ async def handle_my_tickets(user_id: str, reply_token: str):
                     # 過濾出有效的票 (含付款、取票、驗票中)
                     status = t.get("xActionDescription", "")
                     if any(x in status for x in ["付款", "取票", "驗票"]):
-                        departure = t.get("intoStationDepartureTime", "").replace("T", " ")
+                        departure_raw = t.get("intoStationDepartureTime", "")
+                        # 隱藏已過期（發車時間已過）的車票
+                        try:
+                            now_tw = datetime.now(pytz.timezone("Asia/Taipei")).replace(tzinfo=None)
+                            if datetime.fromisoformat(departure_raw) < now_tw:
+                                continue
+                        except Exception:
+                            pass
+                        departure = departure_raw.replace("T", " ")
                         bubble = {
                             "type": "bubble",
                             "size": "mega",
