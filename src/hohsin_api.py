@@ -326,24 +326,39 @@ class HohsinAPI:
             return None
 
         logger.info(f"[QR] 要 QR：ticket_no={ticket_no} web_id={ticket_id}")
+
+        # 找出「任一欄位值 == ticket_no」的那個 dict（不管 ticketNo 欄位叫什麼）
+        def _find_obj(o, val):
+            if isinstance(o, dict):
+                if any(str(x) == str(val) for x in o.values() if not isinstance(x, (dict, list))):
+                    return o
+                for x in o.values():
+                    r = _find_obj(x, val)
+                    if r:
+                        return r
+            elif isinstance(o, list):
+                for x in o:
+                    r = _find_obj(x, val)
+                    if r:
+                        return r
+            return None
+
         vapi_id = ticket_id
         if ticket_no:
-            candidates = ("members/orders", "orders?maxResultCount=50&skipCount=0",
-                          "members/tickets", "tickets?maxResultCount=50&skipCount=0",
-                          "tickets", "orders")
-            for ep in candidates:
-                try:
-                    rr = await self.client.get(f"{self.VAPI_BASE}/{ep}", headers=vhdr, timeout=30.0)
-                    if rr.status_code == 200:
-                        found = _deep_find_id(rr.json(), ticket_no)
-                        logger.info(f"[QR] vapi GET {ep} 200，用 ticketNo 找到 vapi_id={found}")
-                        if found is not None:
-                            vapi_id = found
-                            break
+            try:
+                rr = await self.client.get(f"{self.VAPI_BASE}/members/orders", headers=vhdr, timeout=30.0)
+                logger.info(f"[QR] members/orders status={rr.status_code}")
+                if rr.status_code == 200:
+                    obj = _find_obj(rr.json(), ticket_no)
+                    if obj:
+                        logger.info(f"[QR] 找到票物件 keys={list(obj.keys())}")
+                        vapi_id = obj.get("id") or obj.get("ticketId") or obj.get("ticketInfoId") \
+                            or obj.get("infoId") or vapi_id
+                        logger.info(f"[QR] 採用 vapi_id={vapi_id}")
                     else:
-                        logger.info(f"[QR] vapi GET {ep} status={rr.status_code}")
-                except Exception as e:
-                    logger.warning(f"[QR] vapi GET {ep} 例外: {type(e).__name__}")
+                        logger.info(f"[QR] members/orders 裡找不到 ticketNo={ticket_no}")
+            except Exception as e:
+                logger.warning(f"[QR] members/orders 例外: {type(e).__name__}")
 
         # 取 QR payload
         try:
