@@ -291,7 +291,7 @@ class HohsinAPI:
                 logger.warning(f"[VAPI登入] {method} 例外類型: {type(e).__name__} repr={e!r}")
         return None
 
-    async def get_resilient_qrcode(self, ticket_id: int) -> Optional[bytes]:
+    async def get_resilient_qrcode(self, ticket_id: int, ticket_no: Optional[str] = None) -> Optional[bytes]:
         """
         取得車票 QR（和欣 2026 改版：走手機 App API vapi）：
           1. App 登入 vapi/members/tokenauth → accessToken
@@ -305,12 +305,47 @@ class HohsinAPI:
         if not app_token:
             logger.warning("[QR] App 登入失敗，拿不到 vapi token")
             return None
+
+        vhdr = {"Authorization": f"Bearer {app_token}", "Accept": "application/json",
+                "User-Agent": "Dart/3.4 (dart:io)"}
+
+        # vapi 的 ticket id 與網頁版不同 → 用 ticketNo 去 vapi 票單找出正確的 vapi id
+        def _deep_find_id(obj, tno):
+            if isinstance(obj, dict):
+                if str(obj.get("ticketNo")) == str(tno) and obj.get("id") is not None:
+                    return obj.get("id")
+                for v in obj.values():
+                    r = _deep_find_id(v, tno)
+                    if r is not None:
+                        return r
+            elif isinstance(obj, list):
+                for v in obj:
+                    r = _deep_find_id(v, tno)
+                    if r is not None:
+                        return r
+            return None
+
+        vapi_id = ticket_id
+        if ticket_no:
+            for ep in ("tickets", "orders"):
+                try:
+                    rr = await self.client.get(f"{self.VAPI_BASE}/{ep}", headers=vhdr, timeout=30.0)
+                    if rr.status_code == 200:
+                        found = _deep_find_id(rr.json(), ticket_no)
+                        logger.info(f"[QR] vapi /{ep} 200，用 ticketNo={ticket_no} 找到 vapi_id={found}")
+                        if found is not None:
+                            vapi_id = found
+                            break
+                    else:
+                        logger.info(f"[QR] vapi /{ep} status={rr.status_code}")
+                except Exception as e:
+                    logger.warning(f"[QR] vapi /{ep} 例外: {type(e).__name__}")
+
         # 取 QR payload
         try:
             r = await self.client.put(
-                f"{self.VAPI_BASE}/tickets/{ticket_id}/infos/back",
-                headers={"Authorization": f"Bearer {app_token}", "Accept": "application/json",
-                         "User-Agent": "Dart/3.4 (dart:io)"}, json={}, timeout=30.0)
+                f"{self.VAPI_BASE}/tickets/{vapi_id}/infos/back",
+                headers=vhdr, json={}, timeout=30.0)
             if r.status_code != 200:
                 logger.info(f"[QR] infos/back status={r.status_code} body={r.text[:200]}")
                 return None

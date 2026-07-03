@@ -1487,7 +1487,7 @@ def handle_postback(event):
                     password = hohsin_creds.get("password")
                     
                     if await api.login(phone, password):
-                        qr_bytes = await api.get_resilient_qrcode(int(ticket_id))
+                        qr_bytes = await api.get_resilient_qrcode(int(ticket_id), ticket_no)
                         if qr_bytes:
                             with open(qr_path, "wb") as f: f.write(qr_bytes)
                             is_official = True
