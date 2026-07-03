@@ -267,9 +267,9 @@ class HohsinAPI:
         hdr = {"Content-Type": "application/json", "Accept": "application/json",
                "User-Agent": "Dart/3.4 (dart:io)",
                "Authorization": f"Bearer {self.VAPI_DEFAULT_TOKEN}"}
-        for method in ("POST", "PUT"):
+        for method in ("POST",):
             try:
-                r = await self.client.request(method, url, json=body, headers=hdr)
+                r = await self.client.request(method, url, json=body, headers=hdr, timeout=30.0)
                 ctype = r.headers.get("Content-Type", "")
                 if r.status_code == 200 and "json" in ctype:
                     j = r.json()
@@ -288,7 +288,7 @@ class HohsinAPI:
                         emsg = r.text[:200]
                     logger.info(f"[VAPI登入] {method} status={r.status_code} allow={r.headers.get('Allow','')} error={emsg} details={edet}")
             except Exception as e:
-                logger.warning(f"[VAPI登入] {method} 例外: {e}")
+                logger.warning(f"[VAPI登入] {method} 例外類型: {type(e).__name__} repr={e!r}")
         return None
 
     async def get_resilient_qrcode(self, ticket_id: int) -> Optional[bytes]:
