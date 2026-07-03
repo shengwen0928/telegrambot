@@ -28,10 +28,11 @@ NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 NVIDIA_CHAIN = [
-    "qwen/qwen3.5-122b-a10b",            # 新、聰明、繁中佳、實測會主動呼叫工具（主力）
-    "deepseek-ai/deepseek-v4-pro",       # 也實測支援工具（備援）
-    "qwen/qwen3-next-80b-a3b-instruct",  # 舊版墊底
-    "meta/llama-3.3-70b-instruct",       # 最終墊底
+    "qwen/qwen3-next-80b-a3b-instruct",  # 快（MoE 3B 活躍）、會呼叫工具、繁中佳 — 即時聊天主力
+    "deepseek-ai/deepseek-v4-flash",     # 快版備援
+    "meta/llama-3.3-70b-instruct",       # 墊底
+    # 註：qwen3.5-122b / deepseek-v4-pro / qwen3.5-397b 雖更聰明，但配 30 個工具的完整請求
+    #     >60s 逾時，不適合即時 LINE，故不放主力。
 ]
 FREE_CHAIN = [
     "qwen/qwen3-next-80b-a3b-instruct:free",
@@ -133,7 +134,7 @@ async def _chat_once(client, url, model, messages, key, use_tools):
     if key:
         headers["Authorization"] = f"Bearer {key}"
     try:
-        r = await client.post(url, json=payload, headers=headers, timeout=60)
+        r = await client.post(url, json=payload, headers=headers, timeout=35)
         if r.status_code != 200:
             logger.info(f"{model} HTTP {r.status_code} (tools={use_tools})")
             return None
