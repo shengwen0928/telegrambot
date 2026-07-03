@@ -28,11 +28,10 @@ NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 NVIDIA_CHAIN = [
-    "qwen/qwen3-next-80b-a3b-instruct",  # 快（MoE 3B 活躍）、會呼叫工具、繁中佳 — 即時聊天主力
-    "deepseek-ai/deepseek-v4-flash",     # 快版備援
-    "meta/llama-3.3-70b-instruct",       # 墊底
-    # 註：qwen3.5-122b / deepseek-v4-pro / qwen3.5-397b 雖更聰明，但配 30 個工具的完整請求
-    #     >60s 逾時，不適合即時 LINE，故不放主力。
+    "qwen/qwen3-next-80b-a3b-instruct",  # 實測 2.8s + 會呼叫工具（33 工具完整請求下最佳）— 主力
+    "meta/llama-3.3-70b-instruct",       # 快備援
+    # 註：DeepSeek v4-flash/pro 與 qwen3.5-122b/397b 雖聰明，但配 33 個工具的完整請求
+    #     ~40s+ 逾時（就是害「大腦連不上」的原因），不適合即時 LINE，故不用。
 ]
 FREE_CHAIN = [
     "qwen/qwen3-next-80b-a3b-instruct:free",
