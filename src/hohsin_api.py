@@ -310,7 +310,7 @@ class HohsinAPI:
             r = await self.client.put(
                 f"{self.VAPI_BASE}/tickets/{ticket_id}/infos/back",
                 headers={"Authorization": f"Bearer {app_token}", "Accept": "application/json",
-                         "User-Agent": "Dart/3.4 (dart:io)"}, json={})
+                         "User-Agent": "Dart/3.4 (dart:io)"}, json={}, timeout=30.0)
             if r.status_code != 200:
                 logger.info(f"[QR] infos/back status={r.status_code} body={r.text[:200]}")
                 return None
@@ -323,7 +323,7 @@ class HohsinAPI:
             if not payload:
                 return None
         except Exception as e:
-            logger.error(f"[QR] infos/back 例外: {e}")
+            logger.error(f"[QR] infos/back 例外類型: {type(e).__name__} repr={e!r}")
             return None
         # 用 payload 產生 QR 圖
         try:
