@@ -59,7 +59,9 @@ PERSONA = (
     "   • 呼叫外部 API → http_request\n"
     "3. 這個 LINE 帳號同時能幫忙搶【和欣客運／台灣鐵路】車票——若對方想訂票、搶票、查票，"
     "提醒他直接輸入「搶票」啟動流程；輸入「我的車票」可查詢已購票。\n"
-    "4. 只用台灣繁體中文（專有名詞例外），不可出現簡體字。"
+    "4. 只用台灣繁體中文（專有名詞例外），不可出現簡體字。\n"
+    "5. 【純文字】回覆用純文字，不要用 Markdown：不要 ** 粗體、# 標題、`程式碼`、- 或 * 條列符號、"
+    "[文字](網址) 連結語法。LINE 不會渲染這些，直接打出符號會很醜。要條列就用「・」或直接分行。"
 )
 
 MAX_TOKENS = 800
@@ -74,6 +76,37 @@ def _strip_reasoning(text: str) -> str:
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL | re.IGNORECASE)
     return text.strip()
+
+
+def _clean_for_line(text: str) -> str:
+    """把 Markdown/雜訊清成 LINE 友善純文字（LINE 不會渲染 Markdown，直接印出符號會很醜）。"""
+    if not text:
+        return text
+    t = text
+    # 程式碼圍欄 ```lang ... ``` → 去掉圍欄，留內容
+    t = re.sub(r"```[^\n`]*\n?", "", t)
+    # 連結 [文字](網址) → 文字 網址；[文字](其他) → 文字
+    t = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r"\1 \2", t)
+    t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
+    # 行首：標題 #、引用 >
+    t = re.sub(r"(?m)^\s{0,3}#{1,6}\s*", "", t)
+    t = re.sub(r"(?m)^\s{0,3}>\s?", "", t)
+    # 水平線 ---、***、___
+    t = re.sub(r"(?m)^\s{0,3}([-*_])\1{2,}\s*$", "", t)
+    # 粗體/斜體：**x**、__x__、*x*、_x_
+    t = re.sub(r"\*\*(.+?)\*\*", r"\1", t)
+    t = re.sub(r"__(.+?)__", r"\1", t)
+    t = re.sub(r"(?<![\*\w])\*(?!\s)([^*\n]+?)(?<!\s)\*(?![\*\w])", r"\1", t)
+    t = re.sub(r"(?<![_\w])_(?!\s)([^_\n]+?)(?<!\s)_(?![_\w])", r"\1", t)
+    # 行內程式碼 `x`
+    t = re.sub(r"`([^`]*)`", r"\1", t)
+    t = t.replace("`", "").replace("**", "")
+    # 項目符號 -、*、+ → ・
+    t = re.sub(r"(?m)^(\s*)[-*+]\s+", r"\1・", t)
+    # 壓縮行尾空白與多餘空行
+    t = re.sub(r"[ \t]+\n", "\n", t)
+    t = re.sub(r"\n{3,}", "\n\n", t)
+    return t.strip()
 
 
 def _providers():
@@ -173,6 +206,8 @@ async def ai_reply(user_id: str, user_text: str) -> str:
 
     if not final:
         return "抱歉，我的大腦剛好連不上（雲端模型忙線中），等一下再傳一次給我吧～"
+
+    final = _clean_for_line(final) or final   # 清成 LINE 友善純文字
 
     hist = _HISTORY.setdefault(user_id, [])
     hist.append({"role": "user", "content": user_text})
