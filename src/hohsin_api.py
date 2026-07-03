@@ -14,6 +14,8 @@ class HohsinAPI:
 
     BASE_URL = "https://api.ebus.com.tw"
     VAPI_BASE = "https://vapi.ebus.com.tw/app/android"   # 手機 App API（QR 走這裡）
+    # App 內建的匿名墊底 token（從 APK libapp.so 取得，sub:2，供未登入 vapi 呼叫/登入用）
+    VAPI_DEFAULT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjIiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6ImJjZDI4NzdmLTgzN2MtNGRjZC05MTI3LWFhZWQ2YjMyYzZjNCIsInN1YiI6IjIiLCJqdGkiOiJlYTJlNDhmNi01NWQ2LTQxZTEtYWEzOS1hYmMwNGYxZmMzYTkiLCJpYXQiOjE3NDc3MTIwNjgsIm5iZiI6MTc0NzcxMjA2OCwiZXhwIjoyMDYzMDcyMDY4LCJpc3MiOiJCYWNrZW5kIiwiYXVkIjoiQmFja2VuZCJ9.kqU9J78vPb3nNCUjlagETDGh2krfrqph7sqIGzIAJD4"
     CAPTCHA_URL = "https://www.ebus.com.tw/Common/GetCaptchaImage"
     DEFAULT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjEiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6IjdhYThkYjA3LTJlMWQtNDdlYS1hMjQyLTg1NDJhNzZiMTg1YyIsInN1YiI6IjEiLCJqdGkiOiI5NTlhNWJlNy05YzI0LTQ5NTEtOGQxMS02MTY3ZDRjOWYyZmIiLCJpYXQiOjE3NDc3MTIwMzcsIm5iZiI6MTc0NzcxMjAzNywiZXhwIjoyMDYzMDcyMDM3LCJpc3MiOiJCYWNrZW5kIiwiYXVkIjoiQmFja2VuZCJ9.UwUVXBOVlmm64Os4masmSEME1TpZVzVWWxDOLkOabpg"
 
@@ -257,9 +259,10 @@ class HohsinAPI:
             "platform": "android",
             "androidClientId": str(uuid.uuid4()), "deviceId": str(uuid.uuid4()),
         }
-        # 用 App 風格 header，且不要帶網頁版的 DEFAULT_TOKEN（改用空 Authorization）
+        # 帶 App 內建匿名墊底 token（未登入呼叫 vapi 需要它，否則 ABP 回 401 did not login）
         hdr = {"Content-Type": "application/json", "Accept": "application/json",
-               "User-Agent": "Dart/3.4 (dart:io)", "Authorization": ""}
+               "User-Agent": "Dart/3.4 (dart:io)",
+               "Authorization": f"Bearer {self.VAPI_DEFAULT_TOKEN}"}
         for method in ("POST", "PUT"):
             try:
                 r = await self.client.request(method, url, json=body, headers=hdr)
