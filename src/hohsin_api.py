@@ -13,6 +13,7 @@ class HohsinAPI:
     """和欣客運 API 通訊模組。"""
 
     BASE_URL = "https://api.ebus.com.tw"
+    VAPI_BASE = "https://vapi.ebus.com.tw/app/android"   # 手機 App API（QR 走這裡）
     CAPTCHA_URL = "https://www.ebus.com.tw/Common/GetCaptchaImage"
     DEFAULT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImN0eSI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjEiLCJBc3BOZXQuSWRlbnRpdHkuU2VjdXJpdHlTdGFtcCI6IjdhYThkYjA3LTJlMWQtNDdlYS1hMjQyLTg1NDJhNzZiMTg1YyIsInN1YiI6IjEiLCJqdGkiOiI5NTlhNWJlNy05YzI0LTQ5NTEtOGQxMS02MTY3ZDRjOWYyZmIiLCJpYXQiOjE3NDc3MTIwMzcsIm5iZiI6MTc0NzcxMjAzNywiZXhwIjoyMDYzMDcyMDM3LCJpc3MiOiJCYWNrZW5kIiwiYXVkIjoiQmFja2VuZCJ9.UwUVXBOVlmm64Os4masmSEME1TpZVzVWWxDOLkOabpg"
 
@@ -29,6 +30,8 @@ class HohsinAPI:
         self.client = httpx.AsyncClient(timeout=10.0, follow_redirects=True, headers=self.headers)
         self.ocr = OCREngine()
         self.access_token: Optional[str] = None
+        self._phone: Optional[str] = None       # 存起來供 App(vapi) 登入用
+        self._password: Optional[str] = None
         self.user_info: Dict[str, Any] = {}
         self._stations_cache: List[Dict[str, Any]] = []
 
@@ -65,6 +68,8 @@ class HohsinAPI:
         """
         if not user_name or not password:
             raise ValueError("必須提供和欣客運的帳號與密碼。")
+
+        self._phone, self._password = user_name, password   # 存起來供 App(vapi) 登入
 
         # 0. 先造訪登入頁面以建立基礎 Cookies
         await self.client.get("https://www.ebus.com.tw/Home/LogIn")
@@ -243,25 +248,85 @@ class HohsinAPI:
         response.raise_for_status()
         return response.json()
 
+    async def _vapi_login(self, phone: str, password: str) -> Optional[str]:
+        """登入和欣手機 App API（vapi），回 accessToken。診斷用：記錄狀態/錯誤訊息，不記 token 本身。"""
+        import uuid
+        url = f"{self.VAPI_BASE}/members/tokenauth"
+        body = {
+            "account": phone, "userName": phone, "password": password,
+            "platform": "android",
+            "androidClientId": str(uuid.uuid4()), "deviceId": str(uuid.uuid4()),
+        }
+        # 用 App 風格 header，且不要帶網頁版的 DEFAULT_TOKEN（改用空 Authorization）
+        hdr = {"Content-Type": "application/json", "Accept": "application/json",
+               "User-Agent": "Dart/3.4 (dart:io)", "Authorization": ""}
+        for method in ("POST", "PUT"):
+            try:
+                r = await self.client.request(method, url, json=body, headers=hdr)
+                ctype = r.headers.get("Content-Type", "")
+                if r.status_code == 200 and "json" in ctype:
+                    j = r.json()
+                    res = j.get("result", j) if isinstance(j, dict) else {}
+                    res = res if isinstance(res, dict) else {}
+                    tok = res.get("accessToken") or res.get("token")
+                    logger.info(f"[VAPI登入] {method} 200 result_keys={list(res.keys())} has_token={bool(tok)}")
+                    if tok:
+                        return tok
+                else:
+                    try:
+                        emsg = (r.json().get("error") or {}).get("message")
+                    except Exception:
+                        emsg = r.text[:200]
+                    logger.info(f"[VAPI登入] {method} status={r.status_code} allow={r.headers.get('Allow','')} error={emsg}")
+            except Exception as e:
+                logger.warning(f"[VAPI登入] {method} 例外: {e}")
+        return None
+
     async def get_resilient_qrcode(self, ticket_id: int) -> Optional[bytes]:
         """
-        取得車票 QR。
-
-        ⚠️ 和欣已改版（2026）：舊的 web 端點都已失效
-           - GET web/tickets/{id}/qrcode  → 404
-           - GET web/tickets/{id}         → 空
-
-        官方 QR 現在改由「APP API」提供，且是**動態時效 token**，需 APP 專屬登入：
-           登入： PUT https://vapi.ebus.com.tw/app/android/members/tokenauth
-                  body 欄位：account/phone/password/userName/androidClientId/deviceId/platform → 回 accessToken
-           取QR： PUT https://vapi.ebus.com.tw/app/android/tickets/{id}/infos/back
-                  → result.qrcode（字串 payload）+ qrCodeFormat + expireInSeconds/expires
-                  （APP 端拿 payload 用 qr_flutter 本地畫成 QR）
-
-        目前尚未實作 APP 登入（androidClientId 為動態產生、且需以真實帳號逐步試登），
-        故此處回 None。要支援請在此串接 vapi 登入 → infos/back → 用 payload 產生 QR 圖。
+        取得車票 QR（和欣 2026 改版：走手機 App API vapi）：
+          1. App 登入 vapi/members/tokenauth → accessToken
+          2. PUT vapi/tickets/{id}/infos/back → result.qrcode（動態時效 payload）
+          3. 用 segno 把 payload 產生成 QR PNG 回傳
         """
-        return None
+        if not (self._phone and self._password):
+            logger.warning("[QR] 無帳密可做 App 登入")
+            return None
+        app_token = await self._vapi_login(self._phone, self._password)
+        if not app_token:
+            logger.warning("[QR] App 登入失敗，拿不到 vapi token")
+            return None
+        # 取 QR payload
+        try:
+            r = await self.client.put(
+                f"{self.VAPI_BASE}/tickets/{ticket_id}/infos/back",
+                headers={"Authorization": f"Bearer {app_token}", "Accept": "application/json",
+                         "User-Agent": "Dart/3.4 (dart:io)"}, json={})
+            if r.status_code != 200:
+                logger.info(f"[QR] infos/back status={r.status_code} body={r.text[:200]}")
+                return None
+            j = r.json()
+            res = j.get("result", j) if isinstance(j, dict) else {}
+            res = res if isinstance(res, dict) else {}
+            payload = res.get("qrcode")
+            logger.info(f"[QR] infos/back 200 result_keys={list(res.keys())} "
+                        f"has_qrcode={bool(payload)} expired={res.get('expired')}")
+            if not payload:
+                return None
+        except Exception as e:
+            logger.error(f"[QR] infos/back 例外: {e}")
+            return None
+        # 用 payload 產生 QR 圖
+        try:
+            import io
+            import segno
+            buf = io.BytesIO()
+            segno.make(str(payload), error="m").save(buf, kind="png", scale=8, border=2)
+            logger.info("[QR] 已用 payload 產生 QR PNG ✅")
+            return buf.getvalue()
+        except Exception as e:
+            logger.error(f"[QR] 產生 QR 圖失敗（伺服器需 pip install segno）: {e}")
+            return None
 
     def _decode_qr_base64(self, data_str: str) -> Optional[bytes]:
         import base64
