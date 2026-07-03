@@ -325,21 +325,25 @@ class HohsinAPI:
                         return r
             return None
 
+        logger.info(f"[QR] 要 QR：ticket_no={ticket_no} web_id={ticket_id}")
         vapi_id = ticket_id
         if ticket_no:
-            for ep in ("tickets", "orders"):
+            candidates = ("members/orders", "orders?maxResultCount=50&skipCount=0",
+                          "members/tickets", "tickets?maxResultCount=50&skipCount=0",
+                          "tickets", "orders")
+            for ep in candidates:
                 try:
                     rr = await self.client.get(f"{self.VAPI_BASE}/{ep}", headers=vhdr, timeout=30.0)
                     if rr.status_code == 200:
                         found = _deep_find_id(rr.json(), ticket_no)
-                        logger.info(f"[QR] vapi /{ep} 200，用 ticketNo={ticket_no} 找到 vapi_id={found}")
+                        logger.info(f"[QR] vapi GET {ep} 200，用 ticketNo 找到 vapi_id={found}")
                         if found is not None:
                             vapi_id = found
                             break
                     else:
-                        logger.info(f"[QR] vapi /{ep} status={rr.status_code}")
+                        logger.info(f"[QR] vapi GET {ep} status={rr.status_code}")
                 except Exception as e:
-                    logger.warning(f"[QR] vapi /{ep} 例外: {type(e).__name__}")
+                    logger.warning(f"[QR] vapi GET {ep} 例外: {type(e).__name__}")
 
         # 取 QR payload
         try:
