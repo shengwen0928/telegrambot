@@ -28,8 +28,10 @@ NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 NVIDIA_CHAIN = [
-    "qwen/qwen3-next-80b-a3b-instruct",
-    "meta/llama-3.3-70b-instruct",
+    "qwen/qwen3.5-122b-a10b",            # 新、聰明、繁中佳、實測會主動呼叫工具（主力）
+    "deepseek-ai/deepseek-v4-pro",       # 也實測支援工具（備援）
+    "qwen/qwen3-next-80b-a3b-instruct",  # 舊版墊底
+    "meta/llama-3.3-70b-instruct",       # 最終墊底
 ]
 FREE_CHAIN = [
     "qwen/qwen3-next-80b-a3b-instruct:free",
