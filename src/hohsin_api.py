@@ -254,10 +254,14 @@ class HohsinAPI:
         """登入和欣手機 App API（vapi），回 accessToken。診斷用：記錄狀態/錯誤訊息，不記 token 本身。"""
         import uuid
         url = f"{self.VAPI_BASE}/members/tokenauth"
+        cid, did = str(uuid.uuid4()), str(uuid.uuid4())
+        # 超集：網頁版密碼欄位是 securityCode，這裡兩個都放；platform 大小寫都給
         body = {
-            "account": phone, "userName": phone, "password": password,
-            "platform": "android",
-            "androidClientId": str(uuid.uuid4()), "deviceId": str(uuid.uuid4()),
+            "account": phone, "userName": phone, "phone": phone, "phoneNumber": phone,
+            "password": password, "securityCode": password,
+            "platform": "Android", "Platform": "Android",
+            "androidClientId": cid, "deviceId": did,
+            "version": "1.0.0", "fcmToken": "", "VerifyCode": "",
         }
         # 帶 App 內建匿名墊底 token（未登入呼叫 vapi 需要它，否則 ABP 回 401 did not login）
         hdr = {"Content-Type": "application/json", "Accept": "application/json",
@@ -276,11 +280,13 @@ class HohsinAPI:
                     if tok:
                         return tok
                 else:
+                    emsg = edet = None
                     try:
-                        emsg = (r.json().get("error") or {}).get("message")
+                        err = (r.json().get("error") or {})
+                        emsg, edet = err.get("message"), err.get("details")
                     except Exception:
                         emsg = r.text[:200]
-                    logger.info(f"[VAPI登入] {method} status={r.status_code} allow={r.headers.get('Allow','')} error={emsg}")
+                    logger.info(f"[VAPI登入] {method} status={r.status_code} allow={r.headers.get('Allow','')} error={emsg} details={edet}")
             except Exception as e:
                 logger.warning(f"[VAPI登入] {method} 例外: {e}")
         return None
