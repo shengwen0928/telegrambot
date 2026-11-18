@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ultra 开通助手</title>
+<!-- FIXED v2-B 2026-11-18: parent 回到 one.google.com，其餘同 v2。原 FIXED v2 2026-11-18: probe 400 誤報 / 時區比對錯誤 / 語系殘留 / parent 寫死 / window.open 內嵌連結 已修，見下方 FIXES 註解。原始檔見 index.original.html -->
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0d11;color:#e8eaf0;font:15px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:720px;margin:0 auto;padding:56px 22px 90px}
+  .brand{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .dot{width:9px;height:9px;border-radius:50%;background:#3b6ef0;box-shadow:0 0 12px #3b6ef0}
+  h1{font-size:26px;margin:0;letter-spacing:.4px}
+  .sub{color:#79839a;margin:10px 0 40px;font-size:14px}
+  .step{position:relative;background:#13161d;border:1px solid #232936;border-radius:16px;padding:22px 22px 20px;margin-bottom:14px}
+  .step .idx{position:absolute;top:-11px;left:20px;background:#3b6ef0;color:#fff;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px}
+  .step h2{font-size:15px;margin:6px 0 8px;font-weight:600}
+  .step p{margin:0 0 16px;color:#98a1b3;font-size:14px}
+  .btn{display:inline-block;background:#20262f;color:#e8eaf0;border:1px solid #313a48;border-radius:10px;padding:10px 18px;text-decoration:none;font-size:14px;cursor:pointer;transition:.15s}
+  .btn:hover{background:#28303b;border-color:#3d4757}
+  .btn.primary{background:#3b6ef0;border-color:#3b6ef0;color:#fff}
+  .btn.primary:hover{background:#4b7bf5}
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.plans{grid-template-columns:1fr}}
+  .plan{border:1px solid #2a3140;border-radius:13px;padding:18px;background:#101318;cursor:pointer;transition:.15s;position:relative}
+  .plan:hover{border-color:#3b6ef0;background:#141924;transform:translateY(-1px)}
+  .plan .tag{position:absolute;right:12px;top:12px;font-size:10px;color:#4bd07f;border:1px solid #235c3a;background:#0e2318;border-radius:20px;padding:2px 8px}
+  .plan .n{font-size:16px;font-weight:600;margin-bottom:6px}
+  .plan .c{color:#4bd07f;font-size:13px;margin-bottom:10px}
+  .plan .a{color:#6d768a;font-size:12px}
+  .opt{display:flex;align-items:center;gap:8px;color:#79839a;font-size:13px;margin-top:16px}
+  .opt input{accent-color:#3b6ef0}
+  .panel{display:none;background:#131a26;border:1px solid #24314a;border-radius:14px;padding:18px;margin-bottom:14px}
+  .panel.show{display:block}
+  .panel .t{color:#c3c9d6;font-size:14px;margin-bottom:12px}
+  .panel code{display:block;background:#0a0d12;border:1px solid #1d2532;border-radius:8px;padding:10px;color:#8fa4c8;font-size:11px;word-break:break-all;max-height:110px;overflow:auto;margin-bottom:12px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .note{color:#6d768a;font-size:13px;line-height:1.9;margin-top:30px}
+  .note b{color:#a9b3c6;font-weight:600}
+  a{color:#6f9bff;text-decoration:none}
+  a:hover{text-decoration:underline}
+  .ok{color:#4bd07f}
+  .warn{color:#e8b93e}
+  .diag{font-size:12px;color:#98a1b3;background:#0a0d12;border:1px solid #1d2532;border-radius:8px;padding:10px;margin-top:12px;white-space:pre-wrap;word-break:break-all}
+  iframe.checkout{width:100%;height:480px;border:1px solid #24314a;border-radius:12px;background:#fff;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot"></span><h1>Ultra 开通助手</h1></div>
+  <div style="margin:-6px 0 26px;font-size:13px"><a href="./en.html">English</a></div>
+  <div class="sub">登录、绑卡、点一下。剩余步骤在这页面里完成，不用装东西。</div>
+
+  <div class="step">
+    <div class="idx">第一步</div>
+    <h2>登录谷歌账号</h2>
+    <p>用要开的那个号。登录完回来，这个页面会自动识别。</p>
+    <a class="btn" href="https://accounts.google.com/" target="_blank" rel="noopener">去登录</a>
+    <span id="loginState" style="margin-left:12px;font-size:13px;color:#6d768a">未检测</span>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="recheckLogin" type="button">重新检测</button>
+      <button class="btn" id="confirmLogin" type="button">我已确认登入</button>
+    </div>
+    <div id="loginDiag" class="diag" style="display:none"></div>
+  </div>
+
+  <div class="step">
+    <div class="idx">第二步</div>
+    <h2>绑一张卡</h2>
+    <p>卡里放 1 美元就行，试用期间不扣。已经绑过就跳过。</p>
+    <a class="btn" href="https://pay.google.com/gp/w/u/0/home/paymentmethods" target="_blank" rel="noopener">去绑卡</a>
+  </div>
+
+  <div class="step">
+    <div class="idx">第三步</div>
+    <h2>选一个开通</h2>
+    <p>点完会开新标签跳到 Google 结算页，确认金额是 0 再点订阅。</p>
+    <div class="plans">
+      <div class="plan" data-key="20tb">
+        <span class="tag">推荐</span>
+        <div class="n">Ultra 20 TB</div>
+        <div class="c">免费 12 个月</div>
+        <div class="a">之后 US$99.99/月</div>
+      </div>
+      <div class="plan" data-key="30tb">
+        <div class="n">Ultra 30 TB</div>
+        <div class="c">免费 1 个月</div>
+        <div class="a">之后 US$199.99/月</div>
+      </div>
+    </div>
+    <label class="opt"><input type="checkbox" id="legacy"> 兼容模式（用内置指纹，个别浏览器要开这个）</label>
+    <div class="row" style="margin-top:12px">
+      <a class="btn" href="https://one.google.com/plans?g1_last_touchpoint=37&amp;g1_landing_page=1&amp;otzr=1" target="_blank" rel="noopener">走官方流程（one.google.com 方案頁）</a>
+    </div>
+    <p style="margin-top:10px;font-size:12px;color:#6d768a">修好版說明：下方產生的結帳連結是給內嵌用的，不再直接用新分頁單獨打開，會先嵌在頁面裡試；若仍顯示伺服器錯誤，請改走上方官方流程，或改用腳本版現場查 offer。</p>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="t" id="panelTitle">链接已生成</div>
+    <code id="link"></code>
+    <div class="row">
+      <button class="btn primary" id="open">在新分頁打開（備用，內嵌連結直接開常會失敗）</button>
+      <button class="btn" id="copy">复制链接</button>
+    </div>
+    <div id="fpDiag" class="diag" style="display:none"></div>
+    <iframe id="checkoutFrame" class="checkout" style="display:none" title="Google Checkout"></iframe>
+    <div id="frameNote" style="display:none;font-size:12px;color:#98a1b3;margin-top:8px">已用內嵌方式載入結帳頁。若框內顯示「伺服器端發生錯誤」，代表 Google 不接受此內嵌連結，請改走官方流程或腳本版，不要重複開同一條連結。</div>
+  </div>
+
+  <div class="note">
+    <b>开完记得取消自动续费</b>。路径：Play 商店 → 头像 → 付款和订阅 → 订阅 → Google One → 取消。取消后已经用掉的时间不受影响。<br><br>
+    <b>修好版已知限制（2026-11-18 實測）</b>：登入偵測用的 ListAccounts 端點目前直接回 400，本頁已改成顯示真實狀態碼，不再誤報未登入；結帳連結是內嵌用，直接開新分頁常只會得到「伺服器端發生錯誤」，這不是 400、也不是資格問題。Offer token 是寫死在程式裡的，沒有現場向 Play 查 offer，過期或換帳號就可能失效；要現場查 offer 請用腳本版。<br><br>
+    <b>出現 400</b>：可能是登入偵測端點被擋，也可能是連結裡的指紋對不上。先看第一步的診斷文字寫的是哪一種，再決定是重試、勾兼容模式，還是改走官方流程。<br><br>
+    <b>提示「不符合免费试用条件」</b>：这个号没资格，换一个。需要已绑卡且当前没有任何 Google One 订阅，一个号基本只有一次机会。
+  </div>
+<div style="color:#4d5566;font-size:12px;margin-top:26px;line-height:1.8">本项目仅用于技术研究与学习交流，不提供账号或代开服务。使用产生的任何后果由使用者自行承担。</div>
+</div>
+
+<script>
+/* ---------- 内置指纹（来自真实客户端，作兜底） ---------- */
+const FP_TEMPLATE = "W1tudWxsLG51bGwsbnVsbCxbbnVsbCxbIlJzMi4wLjY6OjpzMTExLDIsMjZiNWUxOSwwLDc2OSxhMDYzZWJlOSwwLDRhMixlZGQ5OGJhYywwLDE4LDQ4NjNmZDM1LDAsNzY5LGNiMmQ1YzZmLDAsNDdlLDZhZDQ3YzZjLDAsNTNlLDdiZGI0OWY2LDAsNDI4LGI2NTQwMjAwLDAsNzY5LGVlYTgyMGI2LDAsNDdlLDFhYTQzMzEsMCxcIldpbjMyLGY1NDY4M2YyLDAsXCJHb29nbGUgSW5jLixhZjc5NDUxNSwwLFwiNS4wIDI4V2luZG93cyBOVCAxMC4wM2IgV2luNjQzYiB4NjQyOSBBcHBsZVdlYktpdDJmNTM3LjM2IDI4S0hUTUwyYyBsaWtlIEdlY2tvMjkgQ2hyb21lMmYxMjUuMC4wLjAgU2FmYXJpMmY1MzcuMzYsZDgxNzIzZDEsMCxcImVuMmRVUyw1Y2MzYWI1ZiwwLFwiTW96aWxsYTJmNS4wIDI4V2luZG93cyBOVCAxMC4wM2IgV2luNjQzYiB4NjQyOSBBcHBsZVdlYktpdDJmNTM3LjM2IDI4S0hUTUwyYyBsaWtlIEdlY2tvMjkgQ2hyb21lMmYxMjUuMC4wLjAgU2FmYXJpMmY1MzcuMzYsMjRhNjZkZjYsMCwxMmMsXCJXZWQgRGVjIDMxIDE5NjkgMTlhMDAzYTAwIEdNVDJkMDUwMCAyOEVhc3Rlcm4gU3RhbmRhcmQgVGltZTI5LDJjYTA1NTRmLFwiUERGIFZpZXdlciwwLFwiUG9ydGFibGUgRG9jdW1lbnQgRm9ybWF0LFwiQ2hyb21lIFBERiBWaWV3ZXIsMCxcIlBvcnRhYmxlIERvY3VtZW50IEZvcm1hdCxcIkNocm9taXVtIFBERiBWaWV3ZXIsMCxcIlBvcnRhYmxlIERvY3VtZW50IEZvcm1hdCxcIk1pY3Jvc29mdCBFZGdlIFBERiBWaWV3ZXIsMCxcIlBvcnRhYmxlIERvY3VtZW50IEZvcm1hdCxcIldlYktpdCBidWlsdDJkaW4gUERGLDAsXCJQb3J0YWJsZSBEb2N1bWVudCBGb3JtYXQsNmM4YjlkNWIsNzcwYzY3ZmMsMCwwOmEyMSwzLDFhMWRkYzkzMmQ0LDAsODQsMTphNDAsXCJmLDFhMWRkYzkzMmQ1Il0sIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIENocm9tZS8xMjUuMC4wLjAgU2FmYXJpLzUzNy4zNiIsImh0dHBzOi8vcGF5bWVudHMuZ29vZ2xlLmNvbSJdLG51bGwsbnVsbCwiZW4iLDEsMV0sWyJodHRwczovL3BheW1lbnRzLmdvb2dsZS5jb20vcGF5bWVudHMvcmVkaXJlY3RfZm9ybV9sYW5kaW5nP3N1Y2Nlc3M9dHJ1ZSIsImh0dHBzOi8vcGF5bWVudHMuZ29vZ2xlLmNvbS9wYXltZW50cy9yZWRpcmVjdF9mb3JtX2xhbmRpbmc/c3VjY2Vzcz1mYWxzZSJdXQ==";
+
+const PATH = "/plans?g1_last_touchpoint=37&g1_landing_page=1&otzr=1";
+const OFFERS = {
+  "20tb": { sku: "g1.play.20tb",    token: "AYrTWi65Jbm3KRubLXLLA3Re29zKibSnRbvAJEPfxEIVs/d57w8vEhsU7hSkSAfGyjZH8B7/5aj5UTlidbsEwUH8aPN2RTA6pKiltA==" },
+  "30tb": { sku: "g1.play.ai.pro",  token: "AYrTWi7nBQ2Zn0z4s+QJOwg9kQRwH3+z+HXpzRqw9IIU4/C48vPvjH32Bub8SHrWq3YX+yI4g1wJgviYiLCobJNqc9DqRd9WZnDdaQ==" }
+};
+
+/* 把 / - ; ( ) , : 换成客户端内部用的两字节编码 */
+function enc(s) {
+  return s.replace(/\//g, "2f").replace(/-/g, "2d").replace(/;/g, "3b")
+          .replace(/\(/g, "28").replace(/\)/g, "29").replace(/,/g, "2c")
+          .replace(/:/g, "3a");
+}
+
+/* FIXES v2:
+ * [F1] 時區比對錯誤：模板裡是 "19a003a00"（第一個冒號編成 "a"），舊程式卻去找
+ *      "193a003a00"，所以時區永遠換不掉，連結裡一直殘留美東時間。現兩種寫法都換。
+ * [F2] 語系殘留：舊程式只換尾巴的 '"en",1,1'，指紋裡的 "en2dUS"（en-US 編碼後）
+ *      沒換，zh-TW 的瀏覽器也會帶著 en-US。現一併換成目前語系的編碼。
+ * [F3] 雜湊無法重算：指紋裡有多組短雜湊是原始 UA/語系/時區算出來的，程式沒有
+ *      演算法可以重算，本修只做到「明文欄位一致」，並在畫面上列出殘留舊片段，
+ *      不假裝指紋已完全乾淨。若 Google 仍拒絕，請改走官方流程或腳本版。
+ */
+function buildFingerprint() {
+  try {
+    const raw = atob(FP_TEMPLATE);
+    const ua = navigator.userAgent;
+    const plat = /Mac/.test(navigator.platform) ? "MacIntel"
+               : /Win/.test(navigator.platform) ? "Win32" : navigator.platform || "Linux x86_64";
+    const tz = new Date(0).toString();
+    const lang = navigator.language || "en";
+
+    let s = raw;
+    s = s.split("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36").join(ua);
+    s = s.split('\\"Win32').join('\\"' + plat);
+    s = s.split("5.0 28Windows NT 10.03b Win643b x6429 AppleWebKit2f537.36 28KHTML2c like Gecko29 Chrome2f125.0.0.0 Safari2f537.36")
+         .join(enc(ua.replace(/^Mozilla\//, "")));
+    // 時區：模板是 19a003a00，舊碼找 193a003a00 永遠對不上，兩種都換
+    s = s.split("Wed Dec 31 1969 19a003a00 GMT2d0500 28Eastern Standard Time29").join(enc(tz));
+    s = s.split("Wed Dec 31 1969 193a003a00 GMT2d0500 28Eastern Standard Time29").join(enc(tz));
+    // 語系：尾巴 + 指紋內的 en2dUS 一起換
+    s = s.split('"en",1,1').join('"' + lang + '",1,1');
+    s = s.split("en2dUS").join(enc(lang));
+    // 語系尾巴在 payments 段也可能殘留 en，僅在明確的 ,"en",1,1 位置換，已在上行處理
+    return { fp: btoa(s), decoded: s };
+  } catch (e) {
+    return { fp: FP_TEMPLATE, decoded: "", error: String(e) };
+  }
+}
+
+function fingerprintLeftovers(decoded) {
+  if (!decoded) return ["指紋解碼失敗，已退回內置模板"];
+  const out = [];
+  if (decoded.includes("Chrome/125.0.0.0")) out.push("仍含 Chrome/125.0.0.0（舊模板 UA）");
+  if (decoded.includes("19a003a00") || decoded.includes("193a003a00")) out.push("仍含 1969 美東時區片段");
+  if (decoded.includes("Eastern Standard Time")) out.push("仍含 Eastern Standard Time");
+  if (decoded.includes("en2dUS") && (navigator.language || "en") !== "en-US") out.push("仍含 en-US 語系片段");
+  if (decoded.includes("Win32") && !/Win/.test(navigator.platform || "")) out.push("仍含 Win32（目前不是 Windows）");
+  // 雜湊無法重算，誠實標示
+  out.push("注意：指紋內的短雜湊無法由本頁重算，仍是原始模板的值，Google 可能因此拒絕");
+  return out;
+}
+
+/* FIXES v2:
+ * [F4] parent 寫死 one.google.com：本頁不在 one.google.com 上，gapi 會判定父頁不符。
+ *      改成 window.location.origin，並把 pfname 設為目前主機名。
+ * [F5] jsh 寫死 rs=AHpOoo：那是舊的 gapi 會話雜湊，直接沿用會被拒。改成不帶 rs，
+ *      只帶目前語系的 loader，讓 Google 重新建立會話。
+ * [F6] window.open 直接開內嵌連結：tokenized 連結是給 iframe 用的，直接開新分頁
+ *      實測只會得到「伺服器端發生錯誤」。本修改成先嵌進本頁 iframe，另留「新分頁打開」作備用，
+ *      並在旁邊放官方流程連結。若 iframe 也失敗，請勿重複開同一條連結。
+ */
+function buildUrl(key, legacy) {
+  const o = OFFERS[key];
+  const built = legacy ? { fp: FP_TEMPLATE, decoded: "" } : buildFingerprint();
+  const fp = built.fp;
+  const item = [[`subs:com.google.android.apps.subscriptions.red:${o.sku}`, 21], null, null, null, 1, [o.token]];
+  const ear = new Array(25).fill(null);
+  ear[2] = [null, null, PATH];
+  ear[4] = [fp];
+  ear[13] = [[item]];
+  ear[21] = 1;
+
+  const id = "I0_" + Date.now();
+  const langCode = (navigator.language || "en").replace("-", "_");
+  const parent = encodeURIComponent("https://one.google.com");
+  const gapi = "&usegapi=1&id=" + id + "&_gfid=" + id
+    + "&parent=" + parent + "&pfname=" + encodeURIComponent(window.location.hostname) + "&rpctoken="
+    + (1000000 + Math.floor(Math.random() * 8000000))
+    + "&jsh=" + encodeURIComponent("m;/_/scs/abc-static/_/js/k=gapi.lb." + langCode + ".O/d=1/m=__features__");
+  return {
+    url: "https://tokenized.play.google.com/eacquire/multiline?authuser=0&ear="
+      + encodeURIComponent(JSON.stringify(ear)) + gapi,
+    leftovers: legacy ? ["兼容模式：直接使用內置模板，未依目前瀏覽器重建"] : fingerprintLeftovers(built.decoded),
+    fpError: built.error || null
+  };
+}
+
+/* ---------- 交互 ---------- */
+let lastUrl = "";
+const panel = document.getElementById("panel");
+
+document.querySelectorAll(".plan").forEach(el => {
+  el.addEventListener("click", () => {
+    const legacy = document.getElementById("legacy").checked;
+    const built = buildUrl(el.dataset.key, legacy);
+    lastUrl = built.url;
+    document.getElementById("link").textContent = lastUrl;
+    document.getElementById("panelTitle").textContent =
+      (el.dataset.key === "20tb" ? "Ultra 20 TB · 12 个月" : "Ultra 30 TB · 1 个月")
+      + (legacy ? "（兼容模式）" : "（已按你的浏览器生成指纹）");
+    const diag = document.getElementById("fpDiag");
+    diag.style.display = "block";
+    diag.textContent = "指紋檢查：\n- " + built.leftovers.join("\n- ")
+      + (built.fpError ? "\n- 指紋產生錯誤：" + built.fpError : "")
+      + "\n- 注意：Offer token 是寫死在程式裡的，未向 Play 現場查 offer，過期就可能失效。";
+    panel.classList.add("show");
+    // FIX [F6]：先嵌進本頁 iframe，不再直接 window.open 當頂層頁開
+    const frame = document.getElementById("checkoutFrame");
+    const note = document.getElementById("frameNote");
+    frame.style.display = "block";
+    note.style.display = "block";
+    frame.src = lastUrl;
+  });
+});
+
+document.getElementById("open").addEventListener("click", () => {
+  if (lastUrl) window.open(lastUrl, "_blank");
+});
+
+document.getElementById("copy").addEventListener("click", () => {
+  const btn = document.getElementById("copy");
+  navigator.clipboard.writeText(lastUrl).then(() => {
+    btn.textContent = "已复制";
+    setTimeout(() => { btn.textContent = "复制链接"; }, 1500);
+  });
+});
+
+/* FIX [F7] 登入偵測：舊版不檢查狀態碼，400 HTML 一解析就掉進 catch，
+ * 一律顯示「未检测到登录」，跟真的沒登入長一樣。現改成：
+ *  - 先看 r.ok / r.status，400 就明寫 400
+ *  - 解析失敗也明寫原因，不再假裝是未登入
+ *  - 加上重新檢測與手動確認，偵測失敗也不擋後面步驟
+ */
+async function probe() {
+  const el = document.getElementById("loginState");
+  const diag = document.getElementById("loginDiag");
+  el.textContent = "检测中…";
+  diag.style.display = "none";
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch("https://accounts.google.com/ListAccounts?gpsia=1&source=ChromiumBrowser&json=standard", { credentials: "include", signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!r.ok) {
+      el.innerHTML = '<span class="warn">偵測失敗：Google 回傳 ' + r.status + '</span>';
+      diag.style.display = "block";
+      diag.textContent = "偵測失敗不是沒登入：ListAccounts 回傳 HTTP " + r.status + "，不是 JSON 帳號清單。本頁無法自動確認登入，請自行到 myaccount.google.com 確認帳號，再按「我已確認登入」。";
+      return;
+    }
+    const d = await r.json();
+    const n = (d && d[1] && d[1].length) || 0;
+    if (n > 0) el.innerHTML = '<span class="ok">已登录（' + n + ' 個帳號）</span>';
+    else el.textContent = "未检测到登录（回傳 0 個帳號）";
+  } catch (e) {
+    clearTimeout(timer);
+    el.innerHTML = '<span class="warn">偵測失敗：無法讀取登入狀態</span>';
+    diag.style.display = "block";
+    diag.textContent = "原因：" + (e && e.name === "AbortError" ? "請求逾時 8 秒" : String(e)) + "。可能是跨來源請求被擋或網路問題，不代表沒登入。請自行確認後按「我已確認登入」。";
+  }
+}
+document.getElementById("recheckLogin").addEventListener("click", probe);
+document.getElementById("confirmLogin").addEventListener("click", () => {
+  document.getElementById("loginState").innerHTML = '<span class="ok">已確認登入（手動）</span>';
+  document.getElementById("loginDiag").style.display = "none";
+});
+probe();
+</script>
+</body>
+</html>
