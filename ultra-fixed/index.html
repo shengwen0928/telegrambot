@@ -144,13 +144,27 @@ function enc(s) {
  *      演算法可以重算，本修只做到「明文欄位一致」，並在畫面上列出殘留舊片段，
  *      不假裝指紋已完全乾淨。若 Google 仍拒絕，請改走官方流程或腳本版。
  */
+function b64encode(s) {
+  const bytes = new TextEncoder().encode(s);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
 function buildFingerprint() {
   try {
     const raw = atob(FP_TEMPLATE);
     const ua = navigator.userAgent;
     const plat = /Mac/.test(navigator.platform) ? "MacIntel"
                : /Win/.test(navigator.platform) ? "Win32" : navigator.platform || "Linux x86_64";
-    const tz = new Date(0).toString();
+    // FIX v3: Date(0).toString() 在中文瀏覽器會回「台北標準時間」，含非 Latin1 字元，
+    // 直接 btoa 會拋 InvalidCharacterError（v2 實測就是這樣炸掉、退回內置模板）。
+    // 改用英文時區名，並用 UTF-8 安全的 base64。
+    const tzRaw = new Date(0).toString();
+    const tz = tzRaw.replace(/\(([^)]+)\)/, (m, name) => {
+      const off = new Date(0).getTimezoneOffset(); // 台北 -480
+      const en = { "-480": "Taipei Standard Time", "-540": "Tokyo Standard Time", "480": "Pacific Standard Time", "300": "Eastern Standard Time", "0": "Greenwich Mean Time" }[String(off)];
+      return "(" + (en || "Taipei Standard Time") + ")";
+    });
     const lang = navigator.language || "en";
 
     let s = raw;
@@ -165,7 +179,7 @@ function buildFingerprint() {
     s = s.split('"en",1,1').join('"' + lang + '",1,1');
     s = s.split("en2dUS").join(enc(lang));
     // 語系尾巴在 payments 段也可能殘留 en，僅在明確的 ,"en",1,1 位置換，已在上行處理
-    return { fp: btoa(s), decoded: s };
+    return { fp: b64encode(s), decoded: s };
   } catch (e) {
     return { fp: FP_TEMPLATE, decoded: "", error: String(e) };
   }
@@ -265,32 +279,15 @@ document.getElementById("copy").addEventListener("click", () => {
  *  - 解析失敗也明寫原因，不再假裝是未登入
  *  - 加上重新檢測與手動確認，偵測失敗也不擋後面步驟
  */
-async function probe() {
+function probe() {
+  // FIX v3: ListAccounts 沒有 CORS 標頭，從任何外站 fetch 都只會得到 Failed to fetch，
+  // 永遠讀不到狀態碼或帳號清單（v2 在已登入的雲端瀏覽器實測也是這樣）。
+  // 所以不再 fetch，改成請使用者自行確認，偵測不再誤報。
   const el = document.getElementById("loginState");
   const diag = document.getElementById("loginDiag");
-  el.textContent = "检测中…";
-  diag.style.display = "none";
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 8000);
-  try {
-    const r = await fetch("https://accounts.google.com/ListAccounts?gpsia=1&source=ChromiumBrowser&json=standard", { credentials: "include", signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!r.ok) {
-      el.innerHTML = '<span class="warn">偵測失敗：Google 回傳 ' + r.status + '</span>';
-      diag.style.display = "block";
-      diag.textContent = "偵測失敗不是沒登入：ListAccounts 回傳 HTTP " + r.status + "，不是 JSON 帳號清單。本頁無法自動確認登入，請自行到 myaccount.google.com 確認帳號，再按「我已確認登入」。";
-      return;
-    }
-    const d = await r.json();
-    const n = (d && d[1] && d[1].length) || 0;
-    if (n > 0) el.innerHTML = '<span class="ok">已登录（' + n + ' 個帳號）</span>';
-    else el.textContent = "未检测到登录（回傳 0 個帳號）";
-  } catch (e) {
-    clearTimeout(timer);
-    el.innerHTML = '<span class="warn">偵測失敗：無法讀取登入狀態</span>';
-    diag.style.display = "block";
-    diag.textContent = "原因：" + (e && e.name === "AbortError" ? "請求逾時 8 秒" : String(e)) + "。可能是跨來源請求被擋或網路問題，不代表沒登入。請自行確認後按「我已確認登入」。";
-  }
+  el.innerHTML = '<span class="warn">無法自動偵測，請自行確認</span>';
+  diag.style.display = "block";
+  diag.textContent = "Google 不允許外站直接讀登入狀態（跨來源請求被擋），本頁無法自動確認。請點上方「去登錄」確認帳號是 testno1person，再按「我已確認登入」。";
 }
 document.getElementById("recheckLogin").addEventListener("click", probe);
 document.getElementById("confirmLogin").addEventListener("click", () => {
